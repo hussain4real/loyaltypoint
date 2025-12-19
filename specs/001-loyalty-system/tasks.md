@@ -23,8 +23,8 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 **Purpose**: Project initialization and Sanctum middleware configuration
 
-- [ ] T001 Register Sanctum ability middleware aliases in bootstrap/app.php
-- [ ] T002 [P] Create TransactionType enum in app/Enums/TransactionType.php
+- [X] T001 Register Sanctum ability middleware aliases in bootstrap/app.php
+- [X] T002 [P] Create TransactionType enum in app/Enums/TransactionType.php
 
 ---
 
@@ -34,14 +34,14 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create point_transactions migration in database/migrations/2025_12_19_200000_create_point_transactions_table.php
-- [ ] T004 Run migration to create point_transactions table
-- [ ] T005 [P] Create PointTransaction model in app/Models/PointTransaction.php
-- [ ] T006 [P] Create PointTransactionFactory in database/factories/PointTransactionFactory.php
-- [ ] T007 Extend User model with pointTransactions relationship and accessors in app/Models/User.php
-- [ ] T008 [P] Create PointService for business logic in app/Services/PointService.php
-- [ ] T009 [P] Create PointBalanceResource in app/Http/Resources/Api/V1/PointBalanceResource.php
-- [ ] T010 [P] Create PointTransactionResource in app/Http/Resources/Api/V1/PointTransactionResource.php
+- [X] T003 Create point_transactions migration in database/migrations/2025_12_19_200000_create_point_transactions_table.php
+- [X] T004 Run migration to create point_transactions table
+- [X] T005 [P] Create PointTransaction model in app/Models/PointTransaction.php
+- [X] T006 [P] Create PointTransactionFactory in database/factories/PointTransactionFactory.php
+- [X] T007 Extend User model with pointTransactions relationship and accessors in app/Models/User.php
+- [X] T008 [P] Create PointService for business logic in app/Services/PointService.php
+- [X] T009 [P] Create PointBalanceResource in app/Http/Resources/Api/V1/PointBalanceResource.php
+- [X] T010 [P] Create PointTransactionResource in app/Http/Resources/Api/V1/PointTransactionResource.php
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -55,12 +55,12 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 1 (MANDATORY) ⚠️
 
-- [ ] T011 [P] [US1] Create PointServiceTest for earning points in tests/Feature/Services/PointServiceTest.php
+- [X] T011 [P] [US1] Create PointServiceTest for earning points in tests/Feature/Services/PointServiceTest.php
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement awardPoints() method in PointService in app/Services/PointService.php
-- [ ] T013 [US1] Add transaction locking for concurrent safety in PointService
+- [X] T012 [US1] Implement awardPoints() method in PointService in app/Services/PointService.php
+- [X] T013 [US1] Add transaction locking for concurrent safety in PointService
 
 **Checkpoint**: User Story 1 complete - points can be earned and recorded
 
@@ -74,13 +74,13 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T014 [P] [US2] Create PointControllerTest for balance endpoint in tests/Feature/Api/V1/PointControllerTest.php
+- [X] T014 [P] [US2] Create PointControllerTest for balance endpoint in tests/Feature/Api/V1/PointControllerTest.php
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Create PointController in app/Http/Controllers/Api/V1/PointController.php
-- [ ] T016 [US2] Implement balance() action in PointController
-- [ ] T017 [US2] Add customer point routes to routes/api.php (GET /v1/points/balance)
+- [X] T015 [US2] Create PointController in app/Http/Controllers/Api/V1/PointController.php
+- [X] T016 [US2] Implement balance() action in PointController
+- [X] T017 [US2] Add customer point routes to routes/api.php (GET /v1/points/balance)
 
 **Checkpoint**: User Story 2 complete - customers can view their balance
 
@@ -94,16 +94,16 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
 
-- [ ] T018 [P] [US3] Create CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
-- [ ] T019 [P] [US3] Test 401 for unauthenticated requests
-- [ ] T020 [P] [US3] Test 403 for token without points:read scope
-- [ ] T021 [P] [US3] Test 404 for non-existent customer
+- [X] T018 [P] [US3] Create CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
+- [X] T019 [P] [US3] Test 401 for unauthenticated requests
+- [X] T020 [P] [US3] Test 403 for token without points:read scope
+- [X] T021 [P] [US3] Test 404 for non-existent customer
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Create CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
-- [ ] T023 [US3] Implement show() action for customer balance
-- [ ] T024 [US3] Add third-party routes with ability middleware to routes/api.php (GET /v1/customers/{customer}/points)
+- [X] T022 [US3] Create CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
+- [X] T023 [US3] Implement show() action for customer balance
+- [X] T024 [US3] Add third-party routes with ability middleware to routes/api.php (GET /v1/customers/{customer}/points)
 
 **Checkpoint**: User Story 3 complete - third-party apps can read customer points
 
@@ -117,13 +117,13 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
-- [ ] T025 [P] [US4] Add redemption tests to PointServiceTest in tests/Feature/Services/PointServiceTest.php
-- [ ] T026 [P] [US4] Test insufficient balance rejection
+- [X] T025 [P] [US4] Add redemption tests to PointServiceTest in tests/Feature/Services/PointServiceTest.php
+- [X] T026 [P] [US4] Test insufficient balance rejection
 
 ### Implementation for User Story 4
 
-- [ ] T027 [US4] Implement deductPoints() method in PointService in app/Services/PointService.php
-- [ ] T028 [US4] Add balance validation to prevent negative balance
+- [X] T027 [US4] Implement deductPoints() method in PointService in app/Services/PointService.php
+- [X] T028 [US4] Add balance validation to prevent negative balance
 
 **Checkpoint**: User Story 4 complete - points can be redeemed with validation
 
@@ -137,14 +137,14 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 5 (MANDATORY) ⚠️
 
-- [ ] T029 [P] [US5] Add transaction history tests to PointControllerTest in tests/Feature/Api/V1/PointControllerTest.php
-- [ ] T030 [P] [US5] Test pagination and date filtering
+- [X] T029 [P] [US5] Add transaction history tests to PointControllerTest in tests/Feature/Api/V1/PointControllerTest.php
+- [X] T030 [P] [US5] Test pagination and date filtering
 
 ### Implementation for User Story 5
 
-- [ ] T031 [US5] Implement transactions() action in PointController in app/Http/Controllers/Api/V1/PointController.php
-- [ ] T032 [US5] Add transactions route to routes/api.php (GET /v1/points/transactions)
-- [ ] T033 [US5] Add date filtering query parameters support
+- [X] T031 [US5] Implement transactions() action in PointController in app/Http/Controllers/Api/V1/PointController.php
+- [X] T032 [US5] Add transactions route to routes/api.php (GET /v1/points/transactions)
+- [X] T033 [US5] Add date filtering query parameters support
 
 **Checkpoint**: User Story 5 complete - customers can view transaction history
 
@@ -158,13 +158,13 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 6 (MANDATORY) ⚠️
 
-- [ ] T034 [P] [US6] Add transaction history tests to CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
-- [ ] T035 [P] [US6] Test 403 for token without transactions:read scope
+- [X] T034 [P] [US6] Add transaction history tests to CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
+- [X] T035 [P] [US6] Test 403 for token without transactions:read scope
 
 ### Implementation for User Story 6
 
-- [ ] T036 [US6] Implement transactions() action in CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
-- [ ] T037 [US6] Add transactions route with ability middleware to routes/api.php (GET /v1/customers/{customer}/transactions)
+- [X] T036 [US6] Implement transactions() action in CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
+- [X] T037 [US6] Add transactions route with ability middleware to routes/api.php (GET /v1/customers/{customer}/transactions)
 
 **Checkpoint**: User Story 6 complete - third-party apps can read transaction history
 
@@ -178,11 +178,11 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 7 (MANDATORY) ⚠️
 
-- [ ] T038 [P] [US7] Add bonus award tests to CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
+- [X] T038 [P] [US7] Add bonus award tests to CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
 
 ### Implementation for User Story 7
 
-- [ ] T039 [US7] Implement awardBonusPoints() in PointService for bonus type transactions in app/Services/PointService.php
+- [X] T039 [US7] Implement awardBonusPoints() in PointService for bonus type transactions in app/Services/PointService.php
 
 **Checkpoint**: User Story 7 complete - bonus points can be awarded
 
@@ -196,17 +196,17 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 ### Tests for User Story 8 (MANDATORY) ⚠️
 
-- [ ] T040 [P] [US8] Add award endpoint tests to CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
-- [ ] T041 [P] [US8] Test 403 for token without points:award scope
-- [ ] T042 [P] [US8] Test validation errors for invalid input
+- [X] T040 [P] [US8] Add award endpoint tests to CustomerPointControllerTest in tests/Feature/Api/V1/CustomerPointControllerTest.php
+- [X] T041 [P] [US8] Test 403 for token without points:award scope
+- [X] T042 [P] [US8] Test validation errors for invalid input
 
 ### Implementation for User Story 8
 
-- [ ] T043 [P] [US8] Create AwardPointsRequest in app/Http/Requests/Api/V1/AwardPointsRequest.php
-- [ ] T044 [P] [US8] Create DeductPointsRequest in app/Http/Requests/Api/V1/DeductPointsRequest.php
-- [ ] T045 [US8] Implement award() action in CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
-- [ ] T046 [US8] Implement deduct() action in CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
-- [ ] T047 [US8] Add award/deduct routes with ability middleware to routes/api.php
+- [X] T043 [P] [US8] Create AwardPointsRequest in app/Http/Requests/Api/V1/AwardPointsRequest.php
+- [X] T044 [P] [US8] Create DeductPointsRequest in app/Http/Requests/Api/V1/DeductPointsRequest.php
+- [X] T045 [US8] Implement award() action in CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
+- [X] T046 [US8] Implement deduct() action in CustomerPointController in app/Http/Controllers/Api/V1/CustomerPointController.php
+- [X] T047 [US8] Add award/deduct routes with ability middleware to routes/api.php
 
 **Checkpoint**: User Story 8 complete - third-party apps can award and deduct points
 
@@ -228,10 +228,10 @@ Based on plan.md, this is a Laravel 12 API-only application using standard direc
 
 **Purpose**: Code quality, documentation, and final validation
 
-- [ ] T048 [P] Create PointTransactionSeeder in database/seeders/PointTransactionSeeder.php
-- [ ] T049 Run vendor/bin/pint to fix code style
-- [ ] T050 Run php artisan test to verify all tests pass
-- [ ] T051 Validate API against quickstart.md examples
+- [X] T048 [P] Create PointTransactionSeeder in database/seeders/PointTransactionSeeder.php
+- [X] T049 Run vendor/bin/pint to fix code style
+- [X] T050 Run php artisan test to verify all tests pass
+- [X] T051 Validate API against quickstart.md examples
 
 ---
 
