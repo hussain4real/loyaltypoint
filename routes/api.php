@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CustomerPointController;
 use App\Http\Controllers\Api\V1\PointController;
 use Illuminate\Http\Request;
@@ -15,23 +16,35 @@ Route::get('/user', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
-    // Customer endpoints (authenticated user's own data)
-    Route::get('/points/balance', [PointController::class, 'balance']);
-    Route::get('/points/transactions', [PointController::class, 'transactions']);
+Route::prefix('v1')->group(function (): void {
+    // Authentication endpoints (public - no auth required)
+    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/login', [AuthController::class, 'login']);
 
-    // Third-party endpoints (access other customer's data with scoped abilities)
-    Route::prefix('customers/{customer}')->group(function (): void {
-        Route::get('/points', [CustomerPointController::class, 'show'])
-            ->middleware('ability:points:read');
+    // Authenticated routes
+    Route::middleware('auth:sanctum')->group(function (): void {
+        // Auth management
+        Route::get('/auth/user', [AuthController::class, 'user']);
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
 
-        Route::get('/transactions', [CustomerPointController::class, 'transactions'])
-            ->middleware('ability:transactions:read');
+        // Customer endpoints (authenticated user's own data)
+        Route::get('/points/balance', [PointController::class, 'balance']);
+        Route::get('/points/transactions', [PointController::class, 'transactions']);
 
-        Route::post('/points/award', [CustomerPointController::class, 'award'])
-            ->middleware('ability:points:award');
+        // Third-party endpoints (access other customer's data with scoped abilities)
+        Route::prefix('customers/{customer}')->group(function (): void {
+            Route::get('/points', [CustomerPointController::class, 'show'])
+                ->middleware('ability:points:read');
 
-        Route::post('/points/deduct', [CustomerPointController::class, 'deduct'])
-            ->middleware('ability:points:deduct');
+            Route::get('/transactions', [CustomerPointController::class, 'transactions'])
+                ->middleware('ability:transactions:read');
+
+            Route::post('/points/award', [CustomerPointController::class, 'award'])
+                ->middleware('ability:points:award');
+
+            Route::post('/points/deduct', [CustomerPointController::class, 'deduct'])
+                ->middleware('ability:points:deduct');
+        });
     });
 });
