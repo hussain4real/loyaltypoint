@@ -13,7 +13,9 @@ As a customer, I want to earn loyalty points when I make purchases so that I can
 
 **Why this priority**: This is the core value proposition of a loyalty system - customers must be able to earn points. Without earning, there is no loyalty program.
 
-**Independent Test**: Can be fully tested by simulating a purchase transaction and verifying points are credited to the customer's account.
+**Implementation Note**: Points are awarded via `PointService::awardPoints()` which will be called by external order/purchase systems. The earning rate is fixed at 1 point per $1 for MVP. Configurable earning rules are deferred to a future phase.
+
+**Independent Test**: Can be fully tested by calling `PointService::awardPoints()` directly and verifying points are credited to the customer's account.
 
 **Acceptance Scenarios**:
 
@@ -52,23 +54,25 @@ As a third-party application, I want to retrieve a customer's point balance via 
 1. **Given** a valid API token and customer ID, **When** a GET request is made to `/api/v1/customers/{id}/points`, **Then** the response should include the customer's current point balance.
 2. **Given** an invalid API token, **When** a request is made to the points endpoint, **Then** a 401 Unauthorized response should be returned.
 3. **Given** a valid API token but non-existent customer ID, **When** a request is made, **Then** a 404 Not Found response should be returned.
-4. **Given** a valid request, **When** points are retrieved, **Then** the response should include: `points_balance`, `tier`, `last_transaction_date`, and `customer_id`.
+4. **Given** a valid request, **When** points are retrieved, **Then** the response should include: `points_balance`, `tier`, `last_transaction_at`, and `customer_id`.
 
 ---
 
-### User Story 4 - Customer Redeems Points for Rewards (Priority: P2)
+### User Story 4 - Customer Redeems Points (Priority: P2)
 
-As a customer, I want to redeem my loyalty points for rewards so that I can get value from my accumulated points.
+As a customer, I want to redeem (spend) my loyalty points so that I can use my accumulated rewards.
 
 **Why this priority**: Redemption completes the value cycle but requires earning to be implemented first.
 
-**Independent Test**: Can be tested by attempting to redeem points against a reward and verifying balance decreases.
+**Implementation Note**: For MVP, redemption is a point deduction operation. The Reward catalog entity is deferred to a future phase. Third-party systems can call the deduct endpoint to process redemptions against their own reward systems.
+
+**Independent Test**: Can be tested by awarding points, then deducting, and verifying balance decreases correctly.
 
 **Acceptance Scenarios**:
 
-1. **Given** a customer with 1,000 points and a reward costing 500 points, **When** they redeem for that reward, **Then** their balance should decrease to 500 points.
-2. **Given** a customer with 200 points and a reward costing 500 points, **When** they attempt to redeem, **Then** they should receive an error indicating insufficient points.
-3. **Given** a successful redemption, **When** the transaction completes, **Then** a redemption record should be created with the reward details.
+1. **Given** a customer with 1,000 points, **When** 500 points are deducted, **Then** their balance should decrease to 500 points.
+2. **Given** a customer with 200 points, **When** they attempt to deduct 500 points, **Then** they should receive an error indicating insufficient points.
+3. **Given** a successful deduction, **When** the transaction completes, **Then** a redemption record should be created with type 'redeem' and the deduction details.
 
 ---
 
@@ -142,7 +146,7 @@ As a third-party application, I want to award points to customers via API so tha
 - How does system handle concurrent point transactions? → Should use database transactions with locking to prevent race conditions.
 - What happens if a third-party provides negative point values? → Should validate and reject negative values.
 - What happens when a customer is deleted? → Point transactions should be soft-deleted or archived for audit purposes.
-- How are point expirations handled? → Points should have optional expiration dates; expired points are excluded from balance calculations.
+- How are point expirations handled? → **DEFERRED to post-MVP**. The `expires_at` column exists in the schema for future use. For MVP, all points are non-expiring. Future implementation will add: expiration filtering in balance queries, scheduled cleanup command, and expiration notification triggers.
 
 ## Requirements *(mandatory)*
 
