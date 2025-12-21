@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CustomerPointController;
 use App\Http\Controllers\Api\V1\PointController;
+use App\Http\Controllers\Api\V1\VendorAuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,13 @@ Route::prefix('v1')->group(function (): void {
     // Authentication endpoints (public - no auth required)
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
+
+    // Vendor OTP authentication (public - no auth required)
+    Route::prefix('vendor/auth')->group(function (): void {
+        Route::post('/request-otp', [VendorAuthController::class, 'requestOtp']);
+        Route::post('/verify-otp', [VendorAuthController::class, 'verifyOtp']);
+        Route::post('/resend-otp', [VendorAuthController::class, 'resendOtp']);
+    });
 
     // Authenticated routes
     Route::middleware('auth:sanctum')->group(function (): void {
