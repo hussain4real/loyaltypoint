@@ -1,0 +1,532 @@
+openapi: 3.0.3
+info:
+  title: Loyalty Point System API
+  description: |
+    API for managing customer loyalty points. Supports both customer-facing endpoints
+    and third-party integrations via scoped Sanctum tokens.
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: /api/v1
+    description: API Version 1
+
+tags:
+  - name: Customer Points
+    description: Endpoints for authenticated customers to view their own points
+  - name: Third-Party
+    description: Endpoints for third-party applications to manage customer points
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum Token
+      description: |
+        Laravel Sanctum Bearer Token. Include in Authorization header as `Bearer <token>`.
+        Tokens can have scoped abilities: `points:read`, `transactions:read`, `points:award`, `points:deduct`.
+
+  schemas:
+    PointBalance:
+      type: object
+      properties:
+        customer_id:
+          type: integer
+          example: 123
+        points_balance:
+          type: integer
+          example: 1500
+        tier:
+          type: string
+          enum: [bronze, silver, gold, platinum]
+          example: gold
+        last_transaction_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-12-19T10:30:00Z"
+      required:
+        - customer_id
+        - points_balance
+        - tier
+
+    PointTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 456
+        type:
+          type: string
+          enum: [earn, redeem, bonus, adjustment]
+          example: earn
+        points:
+          type: integer
+          description: Positive for credits, negative for debits
+          example: 100
+        balance_after:
+          type: integer
+          example: 1500
+        description:
+          type: string
+          nullable: true
+          example: "Purchase #ORD-123"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-19T10:30:00Z"
+      required:
+        - id
+        - type
+        - points
+        - balance_after
+        - created_at
+
+    AwardPointsRequest:
+      type: object
+      properties:
+        points:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          example: 100
+        description:
+          type: string
+          maxLength: 255
+          example: "Partner purchase bonus"
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            order_id: "ORD-456"
+            source: "partner-app"
+      required:
+        - points
+        - description
+
+    DeductPointsRequest:
+      type: object
+      properties:
+        points:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+          example: 50
+        description:
+          type: string
+          maxLength: 255
+          example: "Reward redemption"
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            reward_id: "RWD-789"
+      required:
+        - points
+        - description
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 15
+        total:
+          type: integer
+          example: 50
+        last_page:
+          type: integer
+          example: 4
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "The given data was invalid."
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            points: ["Points must be a positive integer."]
+
+    UnauthorizedError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Unauthenticated."
+
+    ForbiddenError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Invalid ability provided."
+
+    NotFoundError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Customer not found."
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Customer-facing endpoints
+  /points/balance:
+    get:
+      tags:
+        - Customer Points
+      summary: Get authenticated customer's point balance
+      description: Returns the current point balance for the authenticated customer.
+      operationId: getOwnBalance
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PointBalance"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+
+  /points/transactions:
+    get:
+      tags:
+        - Customer Points
+      summary: Get authenticated customer's transaction history
+      description: Returns paginated transaction history for the authenticated customer.
+      operationId: getOwnTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+            minimum: 1
+            maximum: 100
+          description: Items per page
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter transactions from this date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter transactions until this date
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PointTransaction"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+
+  # Third-party endpoints
+  /customers/{customer}/points:
+    get:
+      tags:
+        - Third-Party
+      summary: Get customer's point balance
+      description: |
+        Returns the point balance for a specific customer.
+        Requires `points:read` token ability.
+      operationId: getCustomerBalance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Customer ID
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PointBalance"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "403":
+          description: Forbidden - missing points:read ability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+
+  /customers/{customer}/transactions:
+    get:
+      tags:
+        - Third-Party
+      summary: Get customer's transaction history
+      description: |
+        Returns paginated transaction history for a specific customer.
+        Requires `transactions:read` token ability.
+      operationId: getCustomerTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Customer ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+            minimum: 1
+            maximum: 100
+          description: Items per page
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter transactions from this date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter transactions until this date
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PointTransaction"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "403":
+          description: Forbidden - missing transactions:read ability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+
+  /customers/{customer}/points/award:
+    post:
+      tags:
+        - Third-Party
+      summary: Award points to customer
+      description: |
+        Awards points to a specific customer's account.
+        Requires `points:award` token ability.
+      operationId: awardPoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Customer ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AwardPointsRequest"
+      responses:
+        "201":
+          description: Points awarded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PointTransaction"
+                  message:
+                    type: string
+                    example: "Points awarded successfully."
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "403":
+          description: Forbidden - missing points:award ability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /customers/{customer}/points/deduct:
+    post:
+      tags:
+        - Third-Party
+      summary: Deduct points from customer
+      description: |
+        Deducts points from a specific customer's account.
+        Requires `points:deduct` token ability.
+        Will fail if customer has insufficient balance.
+      operationId: deductPoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Customer ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeductPointsRequest"
+      responses:
+        "201":
+          description: Points deducted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PointTransaction"
+                  message:
+                    type: string
+                    example: "Points deducted successfully."
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "403":
+          description: Forbidden - missing points:deduct ability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "422":
+          description: Validation error or insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                validation_error:
+                  summary: Validation error
+                  value:
+                    message: "The given data was invalid."
+                    errors:
+                      points: ["Points must be a positive integer."]
+                insufficient_balance:
+                  summary: Insufficient balance
+                  value:
+                    message: "Insufficient points balance."
+                    errors:
+                      points:
+                        ["Cannot deduct more points than available balance."]
