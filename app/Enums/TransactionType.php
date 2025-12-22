@@ -10,12 +10,14 @@ enum TransactionType: string
     case Redeem = 'redeem';
     case Bonus = 'bonus';
     case Adjustment = 'adjustment';
+    case TransferOut = 'transfer_out';
+    case TransferIn = 'transfer_in';
 
     public function isCredit(): bool
     {
         return match ($this) {
-            self::Earn, self::Bonus => true,
-            self::Redeem => false,
+            self::Earn, self::Bonus, self::TransferIn => true,
+            self::Redeem, self::TransferOut => false,
             self::Adjustment => false, // Adjustments can be either, determined by points sign
         };
     }
@@ -27,6 +29,8 @@ enum TransactionType: string
             self::Redeem => 'Points Redeemed',
             self::Bonus => 'Bonus Points',
             self::Adjustment => 'Point Adjustment',
+            self::TransferOut => 'Points Transferred Out',
+            self::TransferIn => 'Points Transferred In',
         };
     }
 }

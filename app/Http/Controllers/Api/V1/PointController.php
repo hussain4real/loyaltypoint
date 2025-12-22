@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\PointBalanceResource;
 use App\Http\Resources\Api\V1\PointTransactionResource;
+use App\Models\Provider;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -14,21 +15,39 @@ class PointController extends Controller
 {
     /**
      * Get the authenticated customer's point balance.
+     * If provider slug is specified, returns balance for that provider only.
+     * Otherwise, returns balances for all providers.
      */
     public function balance(Request $request): PointBalanceResource
     {
-        return new PointBalanceResource($request->user());
+        $user = $request->user();
+
+        if ($request->filled('provider')) {
+            $provider = Provider::where('slug', $request->input('provider'))->firstOrFail();
+
+            return (new PointBalanceResource($user))->forProvider($provider);
+        }
+
+        return new PointBalanceResource($user);
     }
 
     /**
      * Get the authenticated customer's transaction history.
+     * Can be filtered by provider using ?provider=slug.
      */
     public function transactions(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
 
         $query = $user->pointTransactions()
+            ->with('provider')
             ->orderByDesc('created_at');
+
+        // Filter by provider if specified
+        if ($request->filled('provider')) {
+            $provider = Provider::where('slug', $request->input('provider'))->firstOrFail();
+            $query->where('provider_id', $provider->id);
+        }
 
         // Apply date filters if provided
         if ($request->filled('from')) {

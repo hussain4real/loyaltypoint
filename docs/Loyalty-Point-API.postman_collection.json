@@ -1,0 +1,787 @@
+{
+    "info": {
+        "_postman_id": "loyalty-point-api-collection",
+        "name": "Loyalty Point API",
+        "description": "Multi-provider loyalty point system API collection.\n\n## Setup\n1. Import this collection into Postman\n2. Set the `base_url` variable to your API URL\n3. Use the Register or Login endpoints to get a token\n4. The token will be automatically saved to the `auth_token` variable\n\n## Authentication\nMost endpoints require a Bearer token. After login, the token is automatically set.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://loyalty-point.test/api/v1",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "customer_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "provider_slug",
+            "value": "loyalty-plus",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{auth_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "description": "User registration, login, and session management endpoints.",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('auth_token', jsonData.token);",
+                                    "    console.log('Token saved to auth_token variable');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"device_name\": \"Postman\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Register a new user and receive an API token.\n\nThe token is automatically saved to the `auth_token` collection variable."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('auth_token', jsonData.token);",
+                                    "    console.log('Token saved to auth_token variable');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"device_name\": \"Postman\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login with email and password to receive an API token.\n\nThe token is automatically saved to the `auth_token` collection variable."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Current User",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "user"
+                            ]
+                        },
+                        "description": "Get the authenticated user's profile."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout"
+                            ]
+                        },
+                        "description": "Revoke the current access token."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Logout All Devices",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout-all",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout-all"
+                            ]
+                        },
+                        "description": "Revoke all access tokens for the user (logout from all devices)."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Vendor OTP Authentication",
+            "description": "OTP-based authentication flow for vendor terminals. All endpoints require a provider slug to scope authentication to a specific loyalty provider.",
+            "item": [
+                {
+                    "name": "Request OTP",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"alice@example.com\",\n    \"vendor_name\": \"Store Terminal #1\",\n    \"provider\": \"{{provider_slug}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/auth/request-otp",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "auth",
+                                "request-otp"
+                            ]
+                        },
+                        "description": "Send a one-time password to the user's email for a specific provider.\n\nThe OTP expires in 10 minutes.\n\n**Required fields:**\n- `email` - User's registered email\n- `vendor_name` - Vendor/terminal identifier\n- `provider` - Provider slug (e.g., `loyalty-plus`)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Verify OTP",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.access_token) {",
+                                    "        pm.collectionVariables.set('auth_token', jsonData.access_token);",
+                                    "        console.log('Token saved to auth_token variable');",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"alice@example.com\",\n    \"code\": \"123456\",\n    \"device_name\": \"Store Terminal #1\",\n    \"provider\": \"{{provider_slug}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/auth/verify-otp",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "auth",
+                                "verify-otp"
+                            ]
+                        },
+                        "description": "Verify the OTP code and receive an access token with provider-scoped balance.\n\nReplace `123456` with the actual code received via email.\n\nThe response includes the user's point balance for the specified provider only.\n\nThe token is automatically saved to the `auth_token` collection variable."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Resend OTP",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"alice@example.com\",\n    \"vendor_name\": \"Store Terminal #1\",\n    \"provider\": \"{{provider_slug}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/auth/resend-otp",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "auth",
+                                "resend-otp"
+                            ]
+                        },
+                        "description": "Resend a new OTP code for the specified provider. This invalidates any previous OTP codes."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Providers",
+            "description": "List and view loyalty point providers.",
+            "item": [
+                {
+                    "name": "List All Providers",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/providers",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "providers"
+                            ]
+                        },
+                        "description": "List all active loyalty point providers.\n\nThis is a public endpoint - no authentication required."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Provider Details",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/providers/{{provider_slug}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "providers",
+                                "{{provider_slug}}"
+                            ]
+                        },
+                        "description": "Get details of a specific provider by slug.\n\nThis is a public endpoint - no authentication required."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Points (Self-Service)",
+            "description": "Endpoints for authenticated users to view their own points.",
+            "item": [
+                {
+                    "name": "Get My Balance (All Providers)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/points/balance",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "points",
+                                "balance"
+                            ]
+                        },
+                        "description": "Get the authenticated user's point balance across all providers."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get My Balance (Specific Provider)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/points/balance?provider={{provider_slug}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "points",
+                                "balance"
+                            ],
+                            "query": [
+                                {
+                                    "key": "provider",
+                                    "value": "{{provider_slug}}"
+                                }
+                            ]
+                        },
+                        "description": "Get the authenticated user's point balance for a specific provider."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get My Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/points/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "points",
+                                "transactions"
+                            ]
+                        },
+                        "description": "Get the authenticated user's transaction history across all providers."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get My Transactions (Filtered)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/points/transactions?provider={{provider_slug}}&from=2025-01-01&to=2025-12-31&per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "points",
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "provider",
+                                    "value": "{{provider_slug}}",
+                                    "description": "Filter by provider slug"
+                                },
+                                {
+                                    "key": "from",
+                                    "value": "2025-01-01",
+                                    "description": "Start date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2025-12-31",
+                                    "description": "End date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "description": "Results per page (max 100)"
+                                }
+                            ]
+                        },
+                        "description": "Get the authenticated user's transaction history with filters."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Point Exchange",
+            "description": "Exchange points between different providers.",
+            "item": [
+                {
+                    "name": "Preview Exchange",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"from_provider\": \"loyalty-plus\",\n    \"to_provider\": \"rewards-hub\",\n    \"points\": 100\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/points/exchange/preview",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "points",
+                                "exchange",
+                                "preview"
+                            ]
+                        },
+                        "description": "Preview an exchange calculation without executing it.\n\nShows the fee, exchange rate, and points you would receive."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Execute Exchange",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"from_provider\": \"loyalty-plus\",\n    \"to_provider\": \"rewards-hub\",\n    \"points\": 100\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/points/exchange",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "points",
+                                "exchange"
+                            ]
+                        },
+                        "description": "Execute a point exchange between providers.\n\nCreates two transactions:\n- `transfer_out` from the source provider\n- `transfer_in` to the destination provider"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Third-Party Customer Operations",
+            "description": "Endpoints for vendors/partners to manage customer points.\n\nThese require tokens with specific abilities:\n- `points:read` - Read balances\n- `transactions:read` - Read history\n- `points:award` - Award points\n- `points:deduct` - Deduct points",
+            "item": [
+                {
+                    "name": "Get Customer Balance",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/providers/{{provider_slug}}/customers/{{customer_id}}/points",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "providers",
+                                "{{provider_slug}}",
+                                "customers",
+                                "{{customer_id}}",
+                                "points"
+                            ]
+                        },
+                        "description": "Get a customer's point balance for a specific provider.\n\nRequires `points:read` token ability."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Customer Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/providers/{{provider_slug}}/customers/{{customer_id}}/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "providers",
+                                "{{provider_slug}}",
+                                "customers",
+                                "{{customer_id}}",
+                                "transactions"
+                            ]
+                        },
+                        "description": "Get a customer's transaction history for a specific provider.\n\nRequires `transactions:read` token ability."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Customer Transactions (Filtered)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/providers/{{provider_slug}}/customers/{{customer_id}}/transactions?from=2025-01-01&to=2025-12-31&per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "providers",
+                                "{{provider_slug}}",
+                                "customers",
+                                "{{customer_id}}",
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2025-01-01",
+                                    "description": "Start date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2025-12-31",
+                                    "description": "End date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "description": "Results per page (max 100)"
+                                }
+                            ]
+                        },
+                        "description": "Get a customer's transaction history with date filters.\n\nRequires `transactions:read` token ability."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Award Points to Customer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"points\": 150,\n    \"description\": \"Purchase #ORD-12345\",\n    \"metadata\": {\n        \"order_id\": \"ORD-12345\",\n        \"store_id\": \"STORE-001\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/providers/{{provider_slug}}/customers/{{customer_id}}/points/award",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "providers",
+                                "{{provider_slug}}",
+                                "customers",
+                                "{{customer_id}}",
+                                "points",
+                                "award"
+                            ]
+                        },
+                        "description": "Award points to a customer for a specific provider.\n\nRequires `points:award` token ability.\n\n**Request Body:**\n- `points` (required): Points to award (1-1,000,000)\n- `description` (required): Transaction description\n- `metadata` (optional): Additional data object"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Deduct Points from Customer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"points\": 100,\n    \"description\": \"Reward redemption - Free Coffee\",\n    \"metadata\": {\n        \"reward_id\": \"RWD-001\",\n        \"redeemed_at\": \"STORE-001\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/providers/{{provider_slug}}/customers/{{customer_id}}/points/deduct",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "providers",
+                                "{{provider_slug}}",
+                                "customers",
+                                "{{customer_id}}",
+                                "points",
+                                "deduct"
+                            ]
+                        },
+                        "description": "Deduct points from a customer (e.g., for redemptions).\n\nRequires `points:deduct` token ability.\n\n**Request Body:**\n- `points` (required): Points to deduct (1-1,000,000)\n- `description` (required): Transaction description\n- `metadata` (optional): Additional data object\n\n**Note:** Returns 422 if customer has insufficient balance."
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

@@ -24,6 +24,7 @@ class RequestOtpRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email', 'exists:users,email'],
             'vendor_name' => ['required', 'string', 'max:255'],
+            'provider' => ['required', 'string', 'exists:providers,slug'],
         ];
     }
 
@@ -36,6 +37,7 @@ class RequestOtpRequest extends FormRequest
     {
         return [
             'email.exists' => 'No account found with this email address.',
+            'provider.exists' => 'The specified provider does not exist.',
         ];
     }
 }
