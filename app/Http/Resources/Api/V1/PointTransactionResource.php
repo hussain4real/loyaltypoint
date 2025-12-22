@@ -19,6 +19,13 @@ class PointTransactionResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'provider' => $this->whenLoaded('provider', fn () => [
+                'id' => $this->provider->id,
+                'name' => $this->provider->name,
+                'slug' => $this->provider->slug,
+            ], [
+                'id' => $this->provider_id,
+            ]),
             'type' => $this->type->value,
             'points' => $this->points,
             'balance_after' => $this->balance_after,
