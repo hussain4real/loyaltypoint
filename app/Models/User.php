@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -59,28 +61,35 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the user's current point balance.
-     * Note: For MVP, expiration filtering is deferred. All points count.
+     * Get all provider balances for this user.
+     *
+     * @return HasMany<UserProviderBalance, $this>
      */
-    public function getPointBalanceAttribute(): int
+    public function providerBalances(): HasMany
     {
-        return (int) $this->pointTransactions()->sum('points');
+        return $this->hasMany(UserProviderBalance::class);
     }
 
     /**
-     * Get the user's loyalty tier based on total earned points.
+     * Get the user's point balance for a specific provider.
      */
-    public function getLoyaltyTierAttribute(): string
+    public function getBalanceForProvider(Provider $provider): int
     {
-        $totalEarned = (int) $this->pointTransactions()
-            ->where('points', '>', 0)
-            ->sum('points');
+        $balance = $this->providerBalances()
+            ->where('provider_id', $provider->id)
+            ->first();
 
-        return match (true) {
-            $totalEarned >= 10000 => 'platinum',
-            $totalEarned >= 5000 => 'gold',
-            $totalEarned >= 1000 => 'silver',
-            default => 'bronze',
-        };
+        return $balance?->balance ?? 0;
+    }
+
+    /**
+     * Get or create the user's balance record for a specific provider.
+     */
+    public function getOrCreateProviderBalance(Provider $provider): UserProviderBalance
+    {
+        return $this->providerBalances()->firstOrCreate(
+            ['provider_id' => $provider->id],
+            ['balance' => 0]
+        );
     }
 }

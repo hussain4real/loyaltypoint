@@ -3,31 +3,42 @@
 declare(strict_types=1);
 
 use App\Models\PointTransaction;
+use App\Models\Provider;
 use App\Models\User;
+use App\Models\UserProviderBalance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
-describe('GET /api/v1/customers/{customer}/points', function (): void {
+beforeEach(function (): void {
+    $this->provider = Provider::factory()->create(['slug' => 'test-provider']);
+});
+
+describe('GET /api/v1/providers/{provider}/customers/{customer}/points', function (): void {
     it('returns customer point balance for valid token with points:read scope', function (): void {
         $customer = User::factory()->create();
-        PointTransaction::factory()->for($customer)->earn(500)->withBalance(500)->create();
+        UserProviderBalance::create([
+            'user_id' => $customer->id,
+            'provider_id' => $this->provider->id,
+            'balance' => 500,
+        ]);
 
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:read']);
 
-        $response = $this->getJson("/api/v1/customers/{$customer->id}/points");
+        $response = $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points");
 
         $response->assertOk()
             ->assertJsonPath('data.customer_id', $customer->id)
-            ->assertJsonPath('data.points_balance', 500);
+            ->assertJsonPath('data.points_balance', 500)
+            ->assertJsonPath('data.provider.slug', $this->provider->slug);
     });
 
     it('returns 401 for unauthenticated request', function (): void {
         $customer = User::factory()->create();
 
-        $this->getJson("/api/v1/customers/{$customer->id}/points")
+        $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points")
             ->assertUnauthorized();
     });
 
@@ -37,7 +48,7 @@ describe('GET /api/v1/customers/{customer}/points', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['transactions:read']);
 
-        $this->getJson("/api/v1/customers/{$customer->id}/points")
+        $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points")
             ->assertForbidden();
     });
 
@@ -45,33 +56,48 @@ describe('GET /api/v1/customers/{customer}/points', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:read']);
 
-        $this->getJson('/api/v1/customers/99999/points')
+        $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/99999/points")
             ->assertNotFound();
     });
 
-    it('returns tier information', function (): void {
+    it('returns 404 for non-existent provider', function (): void {
         $customer = User::factory()->create();
-        PointTransaction::factory()->for($customer)->earn(5500)->withBalance(5500)->create();
 
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:read']);
 
-        $response = $this->getJson("/api/v1/customers/{$customer->id}/points");
+        $this->getJson("/api/v1/providers/non-existent/customers/{$customer->id}/points")
+            ->assertNotFound();
+    });
+
+    it('returns zero balance for customer with no transactions for provider', function (): void {
+        $customer = User::factory()->create();
+
+        $apiUser = User::factory()->create();
+        Sanctum::actingAs($apiUser, ['points:read']);
+
+        $response = $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points");
 
         $response->assertOk()
-            ->assertJsonPath('data.tier', 'gold');
+            ->assertJsonPath('data.points_balance', 0);
     });
 });
 
-describe('GET /api/v1/customers/{customer}/transactions', function (): void {
+describe('GET /api/v1/providers/{provider}/customers/{customer}/transactions', function (): void {
     it('returns paginated transaction history with transactions:read scope', function (): void {
         $customer = User::factory()->create();
-        PointTransaction::factory()->for($customer)->earn(100)->withBalance(100)->count(5)->create();
+        PointTransaction::factory()
+            ->for($customer)
+            ->forProvider($this->provider)
+            ->earn(100)
+            ->withBalance(100)
+            ->count(5)
+            ->create();
 
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['transactions:read']);
 
-        $response = $this->getJson("/api/v1/customers/{$customer->id}/transactions");
+        $response = $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/transactions");
 
         $response->assertOk()
             ->assertJsonCount(5, 'data')
@@ -79,6 +105,7 @@ describe('GET /api/v1/customers/{customer}/transactions', function (): void {
                 'data' => [
                     '*' => [
                         'id',
+                        'provider',
                         'type',
                         'points',
                         'balance_after',
@@ -97,7 +124,7 @@ describe('GET /api/v1/customers/{customer}/transactions', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:read']);
 
-        $this->getJson("/api/v1/customers/{$customer->id}/transactions")
+        $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/transactions")
             ->assertForbidden();
     });
 
@@ -105,15 +132,57 @@ describe('GET /api/v1/customers/{customer}/transactions', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['transactions:read']);
 
-        $this->getJson('/api/v1/customers/99999/transactions')
+        $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/99999/transactions")
             ->assertNotFound();
+    });
+
+    it('only returns transactions for specified provider', function (): void {
+        $customer = User::factory()->create();
+        $provider2 = Provider::factory()->create(['slug' => 'provider-2']);
+
+        PointTransaction::factory()
+            ->for($customer)
+            ->forProvider($this->provider)
+            ->earn(100)
+            ->withBalance(100)
+            ->create();
+        PointTransaction::factory()
+            ->for($customer)
+            ->forProvider($provider2)
+            ->earn(200)
+            ->withBalance(200)
+            ->create();
+
+        $apiUser = User::factory()->create();
+        Sanctum::actingAs($apiUser, ['transactions:read']);
+
+        $response = $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/transactions");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.points', 100);
     });
 
     it('filters transactions by date range', function (): void {
         $customer = User::factory()->create();
-        PointTransaction::factory()->for($customer)->earn(100)->withBalance(100)->create(['created_at' => now()->subDays(10)]);
-        PointTransaction::factory()->for($customer)->earn(200)->withBalance(300)->create(['created_at' => now()->subDays(5)]);
-        PointTransaction::factory()->for($customer)->earn(300)->withBalance(600)->create(['created_at' => now()]);
+        PointTransaction::factory()
+            ->for($customer)
+            ->forProvider($this->provider)
+            ->earn(100)
+            ->withBalance(100)
+            ->create(['created_at' => now()->subDays(10)]);
+        PointTransaction::factory()
+            ->for($customer)
+            ->forProvider($this->provider)
+            ->earn(200)
+            ->withBalance(300)
+            ->create(['created_at' => now()->subDays(5)]);
+        PointTransaction::factory()
+            ->for($customer)
+            ->forProvider($this->provider)
+            ->earn(300)
+            ->withBalance(600)
+            ->create(['created_at' => now()]);
 
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['transactions:read']);
@@ -121,7 +190,7 @@ describe('GET /api/v1/customers/{customer}/transactions', function (): void {
         $from = now()->subDays(7)->format('Y-m-d');
         $to = now()->subDays(3)->format('Y-m-d');
 
-        $response = $this->getJson("/api/v1/customers/{$customer->id}/transactions?from={$from}&to={$to}");
+        $response = $this->getJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/transactions?from={$from}&to={$to}");
 
         $response->assertOk()
             ->assertJsonCount(1, 'data')
@@ -129,14 +198,14 @@ describe('GET /api/v1/customers/{customer}/transactions', function (): void {
     });
 });
 
-describe('POST /api/v1/customers/{customer}/points/award', function (): void {
+describe('POST /api/v1/providers/{provider}/customers/{customer}/points/award', function (): void {
     it('awards points with points:award scope', function (): void {
         $customer = User::factory()->create();
 
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:award']);
 
-        $response = $this->postJson("/api/v1/customers/{$customer->id}/points/award", [
+        $response = $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points/award", [
             'points' => 100,
             'description' => 'Partner purchase bonus',
             'metadata' => ['order_id' => 'ORD-456'],
@@ -147,7 +216,7 @@ describe('POST /api/v1/customers/{customer}/points/award', function (): void {
             ->assertJsonPath('data.balance_after', 100)
             ->assertJsonPath('message', 'Points awarded successfully.');
 
-        expect($customer->fresh()->point_balance)->toBe(100);
+        expect($customer->getBalanceForProvider($this->provider))->toBe(100);
     });
 
     it('returns 403 for token without points:award scope', function (): void {
@@ -156,7 +225,7 @@ describe('POST /api/v1/customers/{customer}/points/award', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:read']);
 
-        $this->postJson("/api/v1/customers/{$customer->id}/points/award", [
+        $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points/award", [
             'points' => 100,
             'description' => 'Test',
         ])->assertForbidden();
@@ -168,7 +237,7 @@ describe('POST /api/v1/customers/{customer}/points/award', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:award']);
 
-        $this->postJson("/api/v1/customers/{$customer->id}/points/award", [
+        $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points/award", [
             'points' => -100,
             'description' => '',
         ])->assertUnprocessable()
@@ -179,7 +248,19 @@ describe('POST /api/v1/customers/{customer}/points/award', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:award']);
 
-        $this->postJson('/api/v1/customers/99999/points/award', [
+        $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/99999/points/award", [
+            'points' => 100,
+            'description' => 'Test',
+        ])->assertNotFound();
+    });
+
+    it('returns 404 for non-existent provider', function (): void {
+        $customer = User::factory()->create();
+
+        $apiUser = User::factory()->create();
+        Sanctum::actingAs($apiUser, ['points:award']);
+
+        $this->postJson("/api/v1/providers/non-existent/customers/{$customer->id}/points/award", [
             'points' => 100,
             'description' => 'Test',
         ])->assertNotFound();
@@ -191,7 +272,7 @@ describe('POST /api/v1/customers/{customer}/points/award', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:award']);
 
-        $this->postJson("/api/v1/customers/{$customer->id}/points/award", [
+        $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points/award", [
             'points' => 1000001,
             'description' => 'Too many points',
         ])->assertUnprocessable()
@@ -199,15 +280,19 @@ describe('POST /api/v1/customers/{customer}/points/award', function (): void {
     });
 });
 
-describe('POST /api/v1/customers/{customer}/points/deduct', function (): void {
+describe('POST /api/v1/providers/{provider}/customers/{customer}/points/deduct', function (): void {
     it('deducts points with points:deduct scope', function (): void {
         $customer = User::factory()->create();
-        PointTransaction::factory()->for($customer)->earn(500)->withBalance(500)->create();
+        UserProviderBalance::create([
+            'user_id' => $customer->id,
+            'provider_id' => $this->provider->id,
+            'balance' => 500,
+        ]);
 
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:deduct']);
 
-        $response = $this->postJson("/api/v1/customers/{$customer->id}/points/deduct", [
+        $response = $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points/deduct", [
             'points' => 200,
             'description' => 'Reward redemption',
             'metadata' => ['reward_id' => 'RWD-789'],
@@ -218,7 +303,7 @@ describe('POST /api/v1/customers/{customer}/points/deduct', function (): void {
             ->assertJsonPath('data.balance_after', 300)
             ->assertJsonPath('message', 'Points deducted successfully.');
 
-        expect($customer->fresh()->point_balance)->toBe(300);
+        expect($customer->getBalanceForProvider($this->provider))->toBe(300);
     });
 
     it('returns 403 for token without points:deduct scope', function (): void {
@@ -227,7 +312,7 @@ describe('POST /api/v1/customers/{customer}/points/deduct', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:read']);
 
-        $this->postJson("/api/v1/customers/{$customer->id}/points/deduct", [
+        $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points/deduct", [
             'points' => 100,
             'description' => 'Test',
         ])->assertForbidden();
@@ -235,12 +320,16 @@ describe('POST /api/v1/customers/{customer}/points/deduct', function (): void {
 
     it('returns 422 for insufficient balance', function (): void {
         $customer = User::factory()->create();
-        PointTransaction::factory()->for($customer)->earn(100)->withBalance(100)->create();
+        UserProviderBalance::create([
+            'user_id' => $customer->id,
+            'provider_id' => $this->provider->id,
+            'balance' => 100,
+        ]);
 
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:deduct']);
 
-        $this->postJson("/api/v1/customers/{$customer->id}/points/deduct", [
+        $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/{$customer->id}/points/deduct", [
             'points' => 200,
             'description' => 'Too many points',
         ])->assertUnprocessable()
@@ -251,7 +340,7 @@ describe('POST /api/v1/customers/{customer}/points/deduct', function (): void {
         $apiUser = User::factory()->create();
         Sanctum::actingAs($apiUser, ['points:deduct']);
 
-        $this->postJson('/api/v1/customers/99999/points/deduct', [
+        $this->postJson("/api/v1/providers/{$this->provider->slug}/customers/99999/points/deduct", [
             'points' => 100,
             'description' => 'Test',
         ])->assertNotFound();

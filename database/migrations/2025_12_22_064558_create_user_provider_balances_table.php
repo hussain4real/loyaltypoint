@@ -11,20 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('point_transactions', function (Blueprint $table) {
+        Schema::create('user_provider_balances', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('provider_id')->constrained()->cascadeOnDelete();
-            $table->string('type');
-            $table->integer('points');
-            $table->unsignedBigInteger('balance_after');
-            $table->string('description')->nullable();
-            $table->json('metadata')->nullable();
-            $table->timestamp('expires_at')->nullable();
+            $table->bigInteger('balance')->default(0);
             $table->timestamps();
 
-            $table->index(['user_id', 'provider_id', 'created_at']);
-            $table->index('expires_at');
+            $table->unique(['user_id', 'provider_id']);
         });
     }
 
@@ -33,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('point_transactions');
+        Schema::dropIfExists('user_provider_balances');
     }
 };

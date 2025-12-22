@@ -1,12 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
+use App\Models\Otp;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Otp>
+ * @extends Factory<Otp>
  */
 class OtpFactory extends Factory
 {
@@ -17,9 +20,11 @@ class OtpFactory extends Factory
      */
     public function definition(): array
     {
+        $sequence = $this->faker->unique()->numberBetween(0, 999999);
+
         return [
             'user_id' => User::factory(),
-            'code' => str_pad((string) fake()->numberBetween(0, 999999), 6, '0', STR_PAD_LEFT),
+            'code' => str_pad((string) $sequence, 6, '0', STR_PAD_LEFT),
             'purpose' => 'vendor_auth',
             'expires_at' => now()->addMinutes(10),
             'verified_at' => null,

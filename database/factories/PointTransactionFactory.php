@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Enums\TransactionType;
 use App\Models\PointTransaction;
+use App\Models\Provider;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,15 +20,28 @@ class PointTransactionFactory extends Factory
      */
     public function definition(): array
     {
+        $sequence = $this->faker->unique()->numberBetween(1, 999999);
+
         return [
             'user_id' => User::factory(),
-            'type' => $this->faker->randomElement(TransactionType::cases()),
-            'points' => $this->faker->numberBetween(10, 500),
-            'balance_after' => $this->faker->numberBetween(0, 10000),
-            'description' => $this->faker->sentence(),
+            'provider_id' => Provider::factory(),
+            'type' => TransactionType::Earn,
+            'points' => 100,
+            'balance_after' => 100,
+            'description' => "Transaction #{$sequence}",
             'metadata' => null,
             'expires_at' => null,
         ];
+    }
+
+    /**
+     * Set the provider for the transaction.
+     */
+    public function forProvider(Provider $provider): static
+    {
+        return $this->state(fn (): array => [
+            'provider_id' => $provider->id,
+        ]);
     }
 
     /**
@@ -70,6 +84,28 @@ class PointTransactionFactory extends Factory
     {
         return $this->state(fn (): array => [
             'type' => TransactionType::Adjustment,
+            'points' => $points,
+        ]);
+    }
+
+    /**
+     * Create a transfer out transaction.
+     */
+    public function transferOut(int $points = 100): static
+    {
+        return $this->state(fn (): array => [
+            'type' => TransactionType::TransferOut,
+            'points' => -abs($points),
+        ]);
+    }
+
+    /**
+     * Create a transfer in transaction.
+     */
+    public function transferIn(int $points = 100): static
+    {
+        return $this->state(fn (): array => [
+            'type' => TransactionType::TransferIn,
             'points' => $points,
         ]);
     }

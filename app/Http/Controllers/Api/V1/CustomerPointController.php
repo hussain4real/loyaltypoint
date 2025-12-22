@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\AwardPointsRequest;
 use App\Http\Requests\Api\V1\DeductPointsRequest;
 use App\Http\Resources\Api\V1\PointBalanceResource;
 use App\Http\Resources\Api\V1\PointTransactionResource;
+use App\Models\Provider;
 use App\Models\User;
 use App\Services\PointService;
 use Illuminate\Http\JsonResponse;
@@ -23,19 +24,21 @@ class CustomerPointController extends Controller
     ) {}
 
     /**
-     * Get a customer's point balance.
+     * Get a customer's point balance for a specific provider.
      */
-    public function show(User $customer): PointBalanceResource
+    public function show(Provider $provider, User $customer): PointBalanceResource
     {
-        return new PointBalanceResource($customer);
+        return (new PointBalanceResource($customer))->forProvider($provider);
     }
 
     /**
-     * Get a customer's transaction history.
+     * Get a customer's transaction history for a specific provider.
      */
-    public function transactions(Request $request, User $customer): AnonymousResourceCollection
+    public function transactions(Request $request, Provider $provider, User $customer): AnonymousResourceCollection
     {
         $query = $customer->pointTransactions()
+            ->where('provider_id', $provider->id)
+            ->with('provider')
             ->orderByDesc('created_at');
 
         // Apply date filters if provided
@@ -55,16 +58,19 @@ class CustomerPointController extends Controller
     }
 
     /**
-     * Award points to a customer.
+     * Award points to a customer for a specific provider.
      */
-    public function award(AwardPointsRequest $request, User $customer): JsonResponse
+    public function award(AwardPointsRequest $request, Provider $provider, User $customer): JsonResponse
     {
         $transaction = $this->pointService->awardBonusPoints(
             user: $customer,
+            provider: $provider,
             points: $request->integer('points'),
             description: $request->string('description')->toString(),
             metadata: $request->input('metadata'),
         );
+
+        $transaction->load('provider');
 
         return response()->json([
             'data' => new PointTransactionResource($transaction),
@@ -73,13 +79,14 @@ class CustomerPointController extends Controller
     }
 
     /**
-     * Deduct points from a customer.
+     * Deduct points from a customer for a specific provider.
      */
-    public function deduct(DeductPointsRequest $request, User $customer): JsonResponse
+    public function deduct(DeductPointsRequest $request, Provider $provider, User $customer): JsonResponse
     {
         try {
             $transaction = $this->pointService->deductPoints(
                 user: $customer,
+                provider: $provider,
                 points: $request->integer('points'),
                 description: $request->string('description')->toString(),
                 metadata: $request->input('metadata'),
@@ -89,6 +96,8 @@ class CustomerPointController extends Controller
                 'points' => [$e->getMessage()],
             ]);
         }
+
+        $transaction->load('provider');
 
         return response()->json([
             'data' => new PointTransactionResource($transaction),

@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\RequestOtpRequest;
 use App\Http\Requests\Api\V1\VerifyOtpRequest;
+use App\Models\Provider;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
@@ -21,12 +24,24 @@ class VendorAuthController extends Controller
     public function requestOtp(RequestOtpRequest $request): JsonResponse
     {
         $user = User::where('email', $request->validated('email'))->first();
+        $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+
+        // Verify provider is active
+        if (! $provider->is_active) {
+            return response()->json([
+                'message' => 'The specified provider is not active.',
+            ], 422);
+        }
 
         $this->otpService->sendToEmail($user, 'vendor_auth');
 
         return response()->json([
             'message' => 'Verification code sent to your email address.',
             'expires_in_minutes' => 10,
+            'provider' => [
+                'name' => $provider->name,
+                'slug' => $provider->slug,
+            ],
         ]);
     }
 
@@ -36,6 +51,14 @@ class VendorAuthController extends Controller
     public function verifyOtp(VerifyOtpRequest $request): JsonResponse
     {
         $user = User::where('email', $request->validated('email'))->first();
+        $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+
+        // Verify provider is active
+        if (! $provider->is_active) {
+            return response()->json([
+                'message' => 'The specified provider is not active.',
+            ], 422);
+        }
 
         $result = $this->otpService->verify(
             $user,
@@ -63,9 +86,13 @@ class VendorAuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'point_balance' => $user->point_balance,
-                'loyalty_tier' => $user->loyalty_tier,
             ],
+            'provider' => [
+                'id' => $provider->id,
+                'name' => $provider->name,
+                'slug' => $provider->slug,
+            ],
+            'points_balance' => $user->getBalanceForProvider($provider),
         ]);
     }
 
@@ -75,12 +102,24 @@ class VendorAuthController extends Controller
     public function resendOtp(RequestOtpRequest $request): JsonResponse
     {
         $user = User::where('email', $request->validated('email'))->first();
+        $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+
+        // Verify provider is active
+        if (! $provider->is_active) {
+            return response()->json([
+                'message' => 'The specified provider is not active.',
+            ], 422);
+        }
 
         $this->otpService->sendToEmail($user, 'vendor_auth');
 
         return response()->json([
             'message' => 'A new verification code has been sent to your email address.',
             'expires_in_minutes' => 10,
+            'provider' => [
+                'name' => $provider->name,
+                'slug' => $provider->slug,
+            ],
         ]);
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -23,5 +25,11 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
+
+        // Seed providers first (required for transactions)
+        $this->call(ProviderSeeder::class);
+
+        // Seed sample transactions with users
+        $this->call(PointTransactionSeeder::class);
     }
 }

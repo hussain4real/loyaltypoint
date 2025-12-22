@@ -16,6 +16,7 @@ class PointTransaction extends Model
 
     protected $fillable = [
         'user_id',
+        'provider_id',
         'type',
         'points',
         'balance_after',
@@ -47,6 +48,14 @@ class PointTransaction extends Model
     }
 
     /**
+     * @return BelongsTo<Provider, $this>
+     */
+    public function provider(): BelongsTo
+    {
+        return $this->belongsTo(Provider::class);
+    }
+
+    /**
      * Scope to filter transactions by user ID.
      *
      * @param  Builder<PointTransaction>  $query
@@ -55,6 +64,17 @@ class PointTransaction extends Model
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope to filter transactions by provider ID.
+     *
+     * @param  Builder<PointTransaction>  $query
+     * @return Builder<PointTransaction>
+     */
+    public function scopeForProvider(Builder $query, int $providerId): Builder
+    {
+        return $query->where('provider_id', $providerId);
     }
 
     /**
