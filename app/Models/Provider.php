@@ -23,8 +23,8 @@ class Provider extends Model
         'official_logo',
         'web_link',
         'is_active',
-        'exchange_rate_base',
-        'exchange_fee_percent',
+        'points_to_value_ratio',
+        'transfer_fee_percent',
         'metadata',
     ];
 
@@ -35,8 +35,8 @@ class Provider extends Model
     {
         return [
             'is_active' => 'boolean',
-            'exchange_rate_base' => 'decimal:4',
-            'exchange_fee_percent' => 'decimal:2',
+            'points_to_value_ratio' => 'decimal:4',
+            'transfer_fee_percent' => 'decimal:2',
             'metadata' => 'array',
         ];
     }

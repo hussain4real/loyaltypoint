@@ -30,8 +30,8 @@ class ProviderFactory extends Factory
             'official_logo' => null,
             'web_link' => null,
             'is_active' => true,
-            'exchange_rate_base' => 1.0000,
-            'exchange_fee_percent' => 0.00,
+            'points_to_value_ratio' => 1.0000,
+            'transfer_fee_percent' => 0.00,
             'metadata' => null,
         ];
     }
@@ -58,22 +58,22 @@ class ProviderFactory extends Factory
     }
 
     /**
-     * Set a custom exchange rate.
+     * Set a custom points to value ratio.
      */
-    public function withExchangeRate(float $rate): static
+    public function withPointsToValueRatio(float $ratio): static
     {
         return $this->state(fn (): array => [
-            'exchange_rate_base' => $rate,
+            'points_to_value_ratio' => $ratio,
         ]);
     }
 
     /**
-     * Set a custom exchange fee percentage.
+     * Set a custom transfer fee percentage.
      */
-    public function withExchangeFee(float $percent): static
+    public function withTransferFee(float $percent): static
     {
         return $this->state(fn (): array => [
-            'exchange_fee_percent' => $percent,
+            'transfer_fee_percent' => $percent,
         ]);
     }
 }

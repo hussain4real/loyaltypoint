@@ -13,9 +13,15 @@ use Illuminate\Support\Facades\DB;
 class PointExchangeService
 {
     /**
-     * Exchange points from one provider to another.
+     * Exchange points from one provider to another using value-based conversion.
      *
-     * @return array{points_sent: int, fee_deducted: int, points_received: int, transfer_out: PointTransaction, transfer_in: PointTransaction}
+     * The exchange follows this logic:
+     * 1. Calculate gross value: points × source_provider.points_to_value_ratio
+     * 2. Calculate total fee: source_fee + destination_fee + app_fee
+     * 3. Deduct fees from gross value to get net value
+     * 4. Convert net value to destination points: net_value / destination_provider.points_to_value_ratio
+     *
+     * @return array{points_sent: int, gross_value: float, total_fee_percent: float, total_fee_value: float, net_value: float, points_received: int, transfer_out: PointTransaction, transfer_in: PointTransaction}
      *
      * @throws \InvalidArgumentException When validation fails
      */
@@ -25,6 +31,222 @@ class PointExchangeService
         Provider $toProvider,
         int $points,
     ): array {
+        $this->validateExchange($fromProvider, $toProvider, $points);
+
+        return DB::transaction(function () use ($user, $fromProvider, $toProvider, $points): array {
+            // Lock both balance rows to prevent race conditions
+            $fromBalance = $user->getOrCreateProviderBalance($fromProvider);
+            $fromBalance->lockForUpdate();
+
+            $toBalance = $user->getOrCreateProviderBalance($toProvider);
+            $toBalance->lockForUpdate();
+
+            // Validate sufficient balance
+            if ($points > $fromBalance->balance) {
+                throw new \InvalidArgumentException('Insufficient points balance.');
+            }
+
+            // Calculate exchange using value-based logic
+            $calculation = $this->calculateExchange($fromProvider, $toProvider, $points);
+
+            if ($calculation['points_received'] <= 0) {
+                throw new \InvalidArgumentException('Exchange would result in zero points. Try a larger amount.');
+            }
+
+            // Deduct full points from source provider
+            $newFromBalance = $fromBalance->balance - $points;
+            $fromBalance->update(['balance' => $newFromBalance]);
+
+            // Add converted points to destination provider
+            $newToBalance = $toBalance->balance + $calculation['points_received'];
+            $toBalance->update(['balance' => $newToBalance]);
+
+            // Create transfer out transaction
+            $transferOut = PointTransaction::create([
+                'user_id' => $user->id,
+                'provider_id' => $fromProvider->id,
+                'type' => TransactionType::TransferOut,
+                'points' => -$points,
+                'balance_after' => $newFromBalance,
+                'description' => "Transfer to {$toProvider->name}",
+                'metadata' => [
+                    'to_provider_id' => $toProvider->id,
+                    'to_provider_slug' => $toProvider->slug,
+                    'points_sent' => $points,
+                    'gross_value' => $calculation['gross_value'],
+                    'source_fee_percent' => $calculation['source_fee_percent'],
+                    'destination_fee_percent' => $calculation['destination_fee_percent'],
+                    'app_fee_percent' => $calculation['app_fee_percent'],
+                    'total_fee_percent' => $calculation['total_fee_percent'],
+                    'total_fee_value' => $calculation['total_fee_value'],
+                    'net_value' => $calculation['net_value'],
+                    'source_points_to_value_ratio' => $calculation['source_points_to_value_ratio'],
+                    'destination_points_to_value_ratio' => $calculation['destination_points_to_value_ratio'],
+                    'points_received' => $calculation['points_received'],
+                ],
+            ]);
+
+            // Create transfer in transaction
+            $transferIn = PointTransaction::create([
+                'user_id' => $user->id,
+                'provider_id' => $toProvider->id,
+                'type' => TransactionType::TransferIn,
+                'points' => $calculation['points_received'],
+                'balance_after' => $newToBalance,
+                'description' => "Transfer from {$fromProvider->name}",
+                'metadata' => [
+                    'from_provider_id' => $fromProvider->id,
+                    'from_provider_slug' => $fromProvider->slug,
+                    'original_points' => $points,
+                    'gross_value' => $calculation['gross_value'],
+                    'total_fee_percent' => $calculation['total_fee_percent'],
+                    'total_fee_value' => $calculation['total_fee_value'],
+                    'net_value' => $calculation['net_value'],
+                ],
+            ]);
+
+            return [
+                'points_sent' => $points,
+                'gross_value' => $calculation['gross_value'],
+                'total_fee_percent' => $calculation['total_fee_percent'],
+                'total_fee_value' => $calculation['total_fee_value'],
+                'net_value' => $calculation['net_value'],
+                'points_received' => $calculation['points_received'],
+                'transfer_out' => $transferOut,
+                'transfer_in' => $transferIn,
+            ];
+        });
+    }
+
+    /**
+     * Preview an exchange without executing it.
+     *
+     * Returns detailed breakdown of the exchange calculation including:
+     * - Value conversion from source points to currency
+     * - Individual fee breakdowns (source, destination, app)
+     * - Net value after fees
+     * - Final points to be received in destination provider
+     *
+     * @return array<string, mixed>
+     */
+    public function preview(
+        User $user,
+        Provider $fromProvider,
+        Provider $toProvider,
+        int $points,
+    ): array {
+        $this->validateExchange($fromProvider, $toProvider, $points);
+
+        $currentBalance = $user->getBalanceForProvider($fromProvider);
+        $calculation = $this->calculateExchange($fromProvider, $toProvider, $points);
+
+        return [
+            // Input
+            'points_to_send' => $points,
+            'from_provider' => [
+                'slug' => $fromProvider->slug,
+                'name' => $fromProvider->name,
+                'points_to_value_ratio' => $calculation['source_points_to_value_ratio'],
+                'transfer_fee_percent' => $calculation['source_fee_percent'],
+            ],
+            'to_provider' => [
+                'slug' => $toProvider->slug,
+                'name' => $toProvider->name,
+                'points_to_value_ratio' => $calculation['destination_points_to_value_ratio'],
+                'transfer_fee_percent' => $calculation['destination_fee_percent'],
+            ],
+
+            // Balance check
+            'current_balance' => $currentBalance,
+            'sufficient_balance' => $currentBalance >= $points,
+
+            // Value calculation
+            'gross_value' => $calculation['gross_value'],
+
+            // Fee breakdown
+            'fees' => [
+                'source_provider_fee' => [
+                    'percent' => $calculation['source_fee_percent'],
+                    'value' => $calculation['source_fee_value'],
+                ],
+                'destination_provider_fee' => [
+                    'percent' => $calculation['destination_fee_percent'],
+                    'value' => $calculation['destination_fee_value'],
+                ],
+                'app_fee' => [
+                    'percent' => $calculation['app_fee_percent'],
+                    'value' => $calculation['app_fee_value'],
+                ],
+                'total' => [
+                    'percent' => $calculation['total_fee_percent'],
+                    'value' => $calculation['total_fee_value'],
+                ],
+            ],
+
+            // Result
+            'net_value' => $calculation['net_value'],
+            'points_to_receive' => $calculation['points_received'],
+        ];
+    }
+
+    /**
+     * Calculate the exchange values and fees.
+     *
+     * @return array<string, float|int>
+     */
+    private function calculateExchange(Provider $fromProvider, Provider $toProvider, int $points): array
+    {
+        // Get ratios and fees
+        $sourceRatio = (float) $fromProvider->points_to_value_ratio;
+        $destRatio = (float) $toProvider->points_to_value_ratio;
+        $sourceFeePercent = (float) $fromProvider->transfer_fee_percent;
+        $destFeePercent = (float) $toProvider->transfer_fee_percent;
+        $appFeePercent = (float) config('services.loyalty.app_transfer_fee_percent', 5.0);
+
+        // Step 1: Calculate gross value from points
+        // e.g., 1000 points × 0.1 = $100
+        $grossValue = $points * $sourceRatio;
+
+        // Step 2: Calculate total fee percentage and value
+        $totalFeePercent = $sourceFeePercent + $destFeePercent + $appFeePercent;
+        $totalFeeValue = round($grossValue * $totalFeePercent / 100, 2);
+
+        // Calculate individual fee values for breakdown
+        $sourceFeeValue = round($grossValue * $sourceFeePercent / 100, 2);
+        $destFeeValue = round($grossValue * $destFeePercent / 100, 2);
+        $appFeeValue = round($grossValue * $appFeePercent / 100, 2);
+
+        // Step 3: Calculate net value after fees
+        $netValue = round($grossValue - $totalFeeValue, 2);
+
+        // Step 4: Convert net value to destination points
+        // e.g., $90 / 1.0 = 90 points
+        $pointsReceived = $destRatio > 0 ? (int) floor($netValue / $destRatio) : 0;
+
+        return [
+            'source_points_to_value_ratio' => $sourceRatio,
+            'destination_points_to_value_ratio' => $destRatio,
+            'source_fee_percent' => $sourceFeePercent,
+            'destination_fee_percent' => $destFeePercent,
+            'app_fee_percent' => $appFeePercent,
+            'gross_value' => round($grossValue, 2),
+            'source_fee_value' => $sourceFeeValue,
+            'destination_fee_value' => $destFeeValue,
+            'app_fee_value' => $appFeeValue,
+            'total_fee_percent' => $totalFeePercent,
+            'total_fee_value' => $totalFeeValue,
+            'net_value' => $netValue,
+            'points_received' => $pointsReceived,
+        ];
+    }
+
+    /**
+     * Validate exchange parameters.
+     *
+     * @throws \InvalidArgumentException
+     */
+    private function validateExchange(Provider $fromProvider, Provider $toProvider, int $points): void
+    {
         if ($points <= 0) {
             throw new \InvalidArgumentException('Points must be a positive integer.');
         }
@@ -40,131 +262,5 @@ class PointExchangeService
         if (! $toProvider->is_active) {
             throw new \InvalidArgumentException('Destination provider is not active.');
         }
-
-        return DB::transaction(function () use ($user, $fromProvider, $toProvider, $points): array {
-            // Lock both balance rows to prevent race conditions
-            $fromBalance = $user->getOrCreateProviderBalance($fromProvider);
-            $fromBalance->lockForUpdate();
-
-            $toBalance = $user->getOrCreateProviderBalance($toProvider);
-            $toBalance->lockForUpdate();
-
-            // Validate sufficient balance
-            if ($points > $fromBalance->balance) {
-                throw new \InvalidArgumentException('Insufficient points balance.');
-            }
-
-            // Calculate fee and net points
-            $feePercent = (float) $fromProvider->exchange_fee_percent;
-            $feeAmount = (int) floor($points * $feePercent / 100);
-            $netPoints = $points - $feeAmount;
-
-            // Calculate converted points using exchange rates
-            // Formula: (netPoints * fromRate) / toRate
-            $fromRate = (float) $fromProvider->exchange_rate_base;
-            $toRate = (float) $toProvider->exchange_rate_base;
-            $convertedPoints = (int) floor($netPoints * $fromRate / $toRate);
-
-            if ($convertedPoints <= 0) {
-                throw new \InvalidArgumentException('Exchange would result in zero points. Try a larger amount.');
-            }
-
-            // Deduct full points from source provider
-            $newFromBalance = $fromBalance->balance - $points;
-            $fromBalance->update(['balance' => $newFromBalance]);
-
-            // Add converted points to destination provider
-            $newToBalance = $toBalance->balance + $convertedPoints;
-            $toBalance->update(['balance' => $newToBalance]);
-
-            // Create transfer out transaction
-            $transferOut = PointTransaction::create([
-                'user_id' => $user->id,
-                'provider_id' => $fromProvider->id,
-                'type' => TransactionType::TransferOut,
-                'points' => -$points,
-                'balance_after' => $newFromBalance,
-                'description' => "Transfer to {$toProvider->name}",
-                'metadata' => [
-                    'to_provider_id' => $toProvider->id,
-                    'to_provider_slug' => $toProvider->slug,
-                    'points_sent' => $points,
-                    'fee_deducted' => $feeAmount,
-                    'fee_percent' => $feePercent,
-                    'points_after_fee' => $netPoints,
-                    'exchange_rate_from' => $fromRate,
-                    'exchange_rate_to' => $toRate,
-                    'points_received' => $convertedPoints,
-                ],
-            ]);
-
-            // Create transfer in transaction
-            $transferIn = PointTransaction::create([
-                'user_id' => $user->id,
-                'provider_id' => $toProvider->id,
-                'type' => TransactionType::TransferIn,
-                'points' => $convertedPoints,
-                'balance_after' => $newToBalance,
-                'description' => "Transfer from {$fromProvider->name}",
-                'metadata' => [
-                    'from_provider_id' => $fromProvider->id,
-                    'from_provider_slug' => $fromProvider->slug,
-                    'original_points' => $points,
-                    'fee_deducted' => $feeAmount,
-                    'exchange_rate_from' => $fromRate,
-                    'exchange_rate_to' => $toRate,
-                ],
-            ]);
-
-            return [
-                'points_sent' => $points,
-                'fee_deducted' => $feeAmount,
-                'points_received' => $convertedPoints,
-                'transfer_out' => $transferOut,
-                'transfer_in' => $transferIn,
-            ];
-        });
-    }
-
-    /**
-     * Preview an exchange without executing it.
-     *
-     * @return array{points_to_send: int, fee_amount: int, fee_percent: float, points_after_fee: int, points_to_receive: int, exchange_rate_from: float, exchange_rate_to: float}
-     */
-    public function preview(
-        User $user,
-        Provider $fromProvider,
-        Provider $toProvider,
-        int $points,
-    ): array {
-        if ($points <= 0) {
-            throw new \InvalidArgumentException('Points must be a positive integer.');
-        }
-
-        if ($fromProvider->id === $toProvider->id) {
-            throw new \InvalidArgumentException('Cannot exchange points within the same provider.');
-        }
-
-        $currentBalance = $user->getBalanceForProvider($fromProvider);
-
-        $feePercent = (float) $fromProvider->exchange_fee_percent;
-        $feeAmount = (int) floor($points * $feePercent / 100);
-        $netPoints = $points - $feeAmount;
-
-        $fromRate = (float) $fromProvider->exchange_rate_base;
-        $toRate = (float) $toProvider->exchange_rate_base;
-        $convertedPoints = (int) floor($netPoints * $fromRate / $toRate);
-
-        return [
-            'points_to_send' => $points,
-            'current_balance' => $currentBalance,
-            'sufficient_balance' => $currentBalance >= $points,
-            'fee_amount' => $feeAmount,
-            'fee_percent' => $feePercent,
-            'points_after_fee' => $netPoints,
-            'points_to_receive' => $convertedPoints,
-            'exchange_rate_from' => $fromRate,
-            'exchange_rate_to' => $toRate,
-        ];
     }
 }
