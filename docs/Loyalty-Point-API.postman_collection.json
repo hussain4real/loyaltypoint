@@ -538,7 +538,7 @@
         },
         {
             "name": "Point Exchange",
-            "description": "Exchange points between different providers.",
+            "description": "Exchange points between different providers using value-based conversion.\n\n## How It Works\nPoints are converted to real currency value, fees are applied, then converted to destination points.\n\n## Fee Structure\nThree fees are combined into a single transfer fee:\n- Source provider fee (`transfer_fee_percent`)\n- Destination provider fee (`transfer_fee_percent`)\n- App fee (configurable, default 5%)\n\n## Calculation\n1. `gross_value = points × source.points_to_value_ratio`\n2. `total_fee_percent = source_fee + dest_fee + app_fee`\n3. `net_value = gross_value - (gross_value × total_fee_percent / 100)`\n4. `points_received = floor(net_value / dest.points_to_value_ratio)`",
             "item": [
                 {
                     "name": "Preview Exchange",
@@ -569,7 +569,7 @@
                                 "preview"
                             ]
                         },
-                        "description": "Preview an exchange calculation without executing it.\n\nShows the fee, exchange rate, and points you would receive."
+                        "description": "Preview an exchange calculation without executing it.\n\n**Response includes:**\n- `from_provider` / `to_provider` - Provider details with `points_to_value_ratio`\n- `points_to_exchange` - Input points\n- `gross_value` - Value before fees\n- `fees` - Breakdown of all three fees (source, destination, app)\n- `total_fee_percent` / `total_fee_value` - Combined fee\n- `net_value` - Value after fees\n- `points_to_receive` - Final points in destination provider\n\n**Example:** 100 points at 0.1 ratio = $10 gross value. With 10% total fees = $9 net value. At 1.0 ratio = 9 destination points."
                     },
                     "response": []
                 },
@@ -601,7 +601,7 @@
                                 "exchange"
                             ]
                         },
-                        "description": "Execute a point exchange between providers.\n\nCreates two transactions:\n- `transfer_out` from the source provider\n- `transfer_in` to the destination provider"
+                        "description": "Execute a point exchange between providers.\n\n**Response includes:**\n- `points_sent` - Points deducted from source\n- `gross_value` - Value before fees\n- `total_fee_percent` / `total_fee_value` - Combined transfer fee\n- `net_value` - Value after fees\n- `points_received` - Points added to destination\n- `transfer_out` - Debit transaction from source provider\n- `transfer_in` - Credit transaction to destination provider\n\n**Note:** Returns 422 if insufficient balance in source provider."
                     },
                     "response": []
                 }

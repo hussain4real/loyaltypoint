@@ -380,8 +380,8 @@ List all active loyalty point providers.
       "official_logo": "https://example.com/logos/bonus-network.png",
       "web_link": "https://bonusnetwork.example.com",
       "is_active": true,
-      "exchange_rate_base": 1.5,
-      "exchange_fee_percent": 3.0
+      "points_to_value_ratio": 0.5,
+      "transfer_fee_percent": 2.5
     },
     {
       "id": 2,
@@ -393,11 +393,19 @@ List all active loyalty point providers.
       "official_logo": "https://example.com/logos/loyalty-plus.png",
       "web_link": "https://loyaltyplus.example.com",
       "is_active": true,
-      "exchange_rate_base": 1.0,
-      "exchange_fee_percent": 0.0
+      "points_to_value_ratio": 0.1,
+      "transfer_fee_percent": 1.5
     }
   ]
 }
+```
+
+**Provider Fields:**
+
+| Field | Description |
+|-------|-------------|
+| `points_to_value_ratio` | Value of 1 point in currency (e.g., 0.1 means 10 points = $1) |
+| `transfer_fee_percent` | Fee charged when transferring OUT of this provider |
 ```
 
 ---
@@ -428,8 +436,8 @@ Get details of a specific provider by slug.
     "official_logo": "https://example.com/logos/loyalty-plus.png",
     "web_link": "https://loyaltyplus.example.com",
     "is_active": true,
-    "exchange_rate_base": 1.0,
-    "exchange_fee_percent": 0.0
+    "points_to_value_ratio": 0.1,
+    "transfer_fee_percent": 1.5
   }
 }
 ```
@@ -594,11 +602,18 @@ GET /api/v1/points/transactions?provider=loyalty-plus&from=2025-12-01&per_page=1
 
 ## Point Exchange
 
-Exchange points between different providers.
+Exchange points between different providers using value-based conversion.
+
+**How Exchange Works:**
+
+1. **Convert points to value:** `gross_value = points × source_provider.points_to_value_ratio`
+2. **Calculate fees:** Three fees apply - source provider fee, destination provider fee, and app fee (5%)
+3. **Deduct fees:** `net_value = gross_value - (gross_value × total_fee_percent / 100)`
+4. **Convert to destination points:** `points_received = floor(net_value / destination_provider.points_to_value_ratio)`
 
 ### POST /points/exchange/preview
 
-Preview an exchange calculation without executing it.
+Preview an exchange calculation without executing it. Shows detailed fee breakdown.
 
 **Authentication:** Required (Bearer Token)
 
@@ -616,7 +631,7 @@ Preview an exchange calculation without executing it.
 {
   "from_provider": "loyalty-plus",
   "to_provider": "rewards-hub",
-  "points": 100
+  "points": 1000
 }
 ```
 
@@ -625,35 +640,57 @@ Preview an exchange calculation without executing it.
 ```json
 {
   "data": {
+    "points_to_send": 1000,
     "from_provider": {
       "slug": "loyalty-plus",
       "name": "Loyalty Plus",
-      "exchange_rate_base": 1.0,
-      "exchange_fee_percent": 0.0
+      "points_to_value_ratio": 0.1,
+      "transfer_fee_percent": 1.5
     },
     "to_provider": {
       "slug": "rewards-hub",
       "name": "Rewards Hub",
-      "exchange_rate_base": 1.25
+      "points_to_value_ratio": 1.0,
+      "transfer_fee_percent": 3.5
     },
-    "points_to_send": 100,
-    "fee_percent": 0.0,
-    "fee_deducted": 0,
-    "net_points_after_fee": 100,
-    "points_to_receive": 80,
-    "current_balance": 725,
-    "sufficient_balance": true
+    "current_balance": 2500,
+    "sufficient_balance": true,
+    "gross_value": 100.0,
+    "fees": {
+      "source_provider_fee": {
+        "percent": 1.5,
+        "value": 1.5
+      },
+      "destination_provider_fee": {
+        "percent": 3.5,
+        "value": 3.5
+      },
+      "app_fee": {
+        "percent": 5.0,
+        "value": 5.0
+      },
+      "total": {
+        "percent": 10.0,
+        "value": 10.0
+      }
+    },
+    "net_value": 90.0,
+    "points_to_receive": 90
   }
 }
 ```
 
-**Exchange Rate Calculation:**
+**Calculation Breakdown (Example above):**
 
-```
-net_points = points_to_send - fee_deducted
-fee_deducted = floor(points_to_send × fee_percent / 100)
-points_to_receive = floor((net_points × from_rate) / to_rate)
-```
+| Step | Calculation | Result |
+|------|-------------|--------|
+| 1. Gross Value | 1000 points × $0.10 | $100.00 |
+| 2. Source Fee (1.5%) | $100 × 1.5% | $1.50 |
+| 3. Dest Fee (3.5%) | $100 × 3.5% | $3.50 |
+| 4. App Fee (5%) | $100 × 5% | $5.00 |
+| 5. Total Fees | $1.50 + $3.50 + $5.00 | $10.00 |
+| 6. Net Value | $100 - $10 | $90.00 |
+| 7. Points Received | $90 / $1.00 | 90 points |
 
 ---
 
@@ -677,7 +714,7 @@ Execute a point exchange between providers.
 {
   "from_provider": "loyalty-plus",
   "to_provider": "rewards-hub",
-  "points": 100
+  "points": 1000
 }
 ```
 
@@ -686,9 +723,12 @@ Execute a point exchange between providers.
 ```json
 {
   "data": {
-    "points_sent": 100,
-    "fee_deducted": 0,
-    "points_received": 80,
+    "points_sent": 1000,
+    "gross_value": 100.0,
+    "total_fee_percent": 10.0,
+    "total_fee_value": 10.0,
+    "net_value": 90.0,
+    "points_received": 90,
     "transfer_out": {
       "id": 29,
       "provider": {
@@ -697,10 +737,10 @@ Execute a point exchange between providers.
         "slug": "loyalty-plus"
       },
       "type": "transfer_out",
-      "points": -100,
-      "balance_after": 625,
-      "description": "Exchange to Rewards Hub",
-      "created_at": "2025-12-22T10:30:00+00:00"
+      "points": -1000,
+      "balance_after": 1500,
+      "description": "Transfer to Rewards Hub",
+      "created_at": "2025-12-23T10:30:00+00:00"
     },
     "transfer_in": {
       "id": 30,
@@ -710,10 +750,10 @@ Execute a point exchange between providers.
         "slug": "rewards-hub"
       },
       "type": "transfer_in",
-      "points": 80,
-      "balance_after": 330,
-      "description": "Exchange from Loyalty Plus",
-      "created_at": "2025-12-22T10:30:00+00:00"
+      "points": 90,
+      "balance_after": 90,
+      "description": "Transfer from Loyalty Plus",
+      "created_at": "2025-12-23T10:30:00+00:00"
     }
   },
   "message": "Points exchanged successfully."

@@ -75,7 +75,10 @@ class ExchangeController extends Controller
         return response()->json([
             'data' => [
                 'points_sent' => $result['points_sent'],
-                'fee_deducted' => $result['fee_deducted'],
+                'gross_value' => $result['gross_value'],
+                'total_fee_percent' => $result['total_fee_percent'],
+                'total_fee_value' => $result['total_fee_value'],
+                'net_value' => $result['net_value'],
                 'points_received' => $result['points_received'],
                 'transfer_out' => new PointTransactionResource($result['transfer_out']),
                 'transfer_in' => new PointTransactionResource($result['transfer_in']),

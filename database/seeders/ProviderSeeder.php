@@ -12,7 +12,12 @@ class ProviderSeeder extends Seeder
     /**
      * Explicit provider data for seeding.
      *
-     * @var array<int, array{name: string, trade_name: string|null, slug: string, category: string|null, description: string|null, official_logo: string|null, web_link: string|null, exchange_rate_base: float, exchange_fee_percent: float}>
+     * Points to value ratio examples:
+     * - 0.1 means 10 points = $1 (10 × 0.1 = 1)
+     * - 1.0 means 1 point = $1 (1 × 1.0 = 1)
+     * - 0.01 means 100 points = $1 (100 × 0.01 = 1)
+     *
+     * @var array<int, array{name: string, trade_name: string|null, slug: string, category: string|null, description: string|null, official_logo: string|null, web_link: string|null, points_to_value_ratio: float, transfer_fee_percent: float}>
      */
     private array $providers = [
         [
@@ -23,8 +28,8 @@ class ProviderSeeder extends Seeder
             'description' => 'Earn points on every purchase at partner retail stores.',
             'official_logo' => 'https://example.com/logos/loyalty-plus.png',
             'web_link' => 'https://loyaltyplus.example.com',
-            'exchange_rate_base' => 1.0000,
-            'exchange_fee_percent' => 0.00,
+            'points_to_value_ratio' => 0.1000, // 10 points = $1
+            'transfer_fee_percent' => 1.50,
         ],
         [
             'name' => 'Rewards Hub',
@@ -34,8 +39,8 @@ class ProviderSeeder extends Seeder
             'description' => 'Collect and redeem points for travel and experiences.',
             'official_logo' => 'https://example.com/logos/rewards-hub.png',
             'web_link' => 'https://rewardshub.example.com',
-            'exchange_rate_base' => 1.2500,
-            'exchange_fee_percent' => 2.50,
+            'points_to_value_ratio' => 1.0000, // 1 point = $1
+            'transfer_fee_percent' => 3.50,
         ],
         [
             'name' => 'Points Express',
@@ -45,8 +50,8 @@ class ProviderSeeder extends Seeder
             'description' => 'Earn points at participating restaurants and cafes.',
             'official_logo' => 'https://example.com/logos/points-express.png',
             'web_link' => 'https://pointsexpress.example.com',
-            'exchange_rate_base' => 0.8000,
-            'exchange_fee_percent' => 1.00,
+            'points_to_value_ratio' => 0.0100, // 100 points = $1
+            'transfer_fee_percent' => 2.00,
         ],
         [
             'name' => 'Bonus Network',
@@ -56,8 +61,8 @@ class ProviderSeeder extends Seeder
             'description' => 'Earn bonus points on entertainment and gaming purchases.',
             'official_logo' => 'https://example.com/logos/bonus-network.png',
             'web_link' => 'https://bonusnetwork.example.com',
-            'exchange_rate_base' => 1.5000,
-            'exchange_fee_percent' => 3.00,
+            'points_to_value_ratio' => 0.5000, // 2 points = $1
+            'transfer_fee_percent' => 2.50,
         ],
         [
             'name' => 'Premium Rewards',
@@ -67,8 +72,8 @@ class ProviderSeeder extends Seeder
             'description' => 'Exclusive rewards program for premium members.',
             'official_logo' => 'https://example.com/logos/premium-rewards.png',
             'web_link' => 'https://premiumrewards.example.com',
-            'exchange_rate_base' => 2.0000,
-            'exchange_fee_percent' => 5.00,
+            'points_to_value_ratio' => 2.0000, // 1 point = $2
+            'transfer_fee_percent' => 1.00,
         ],
     ];
 
@@ -87,8 +92,8 @@ class ProviderSeeder extends Seeder
                 'official_logo' => $providerData['official_logo'],
                 'web_link' => $providerData['web_link'],
                 'is_active' => true,
-                'exchange_rate_base' => $providerData['exchange_rate_base'],
-                'exchange_fee_percent' => $providerData['exchange_fee_percent'],
+                'points_to_value_ratio' => $providerData['points_to_value_ratio'],
+                'transfer_fee_percent' => $providerData['transfer_fee_percent'],
                 'metadata' => null,
             ]);
         }

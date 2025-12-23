@@ -21,8 +21,8 @@ return new class extends Migration
             $table->string('official_logo')->nullable();
             $table->string('web_link')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->decimal('exchange_rate_base', 8, 4)->default(1.0000);
-            $table->decimal('exchange_fee_percent', 5, 2)->default(0.00);
+            $table->decimal('points_to_value_ratio', 10, 4)->default(1.0000)->comment('Value of 1 point in currency (e.g., 0.1 means 10 points = $1)');
+            $table->decimal('transfer_fee_percent', 5, 2)->default(0.00)->comment('Fee charged when transferring OUT of this provider');
             $table->json('metadata')->nullable();
             $table->timestamps();
 
