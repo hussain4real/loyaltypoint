@@ -27,8 +27,8 @@ class ProviderResource extends JsonResource
             'official_logo' => $this->official_logo,
             'web_link' => $this->web_link,
             'is_active' => $this->is_active,
-            'exchange_rate_base' => (float) $this->exchange_rate_base,
-            'exchange_fee_percent' => (float) $this->exchange_fee_percent,
+            'points_to_value_ratio' => (float) $this->points_to_value_ratio,
+            'transfer_fee_percent' => (float) $this->transfer_fee_percent,
         ];
     }
 }

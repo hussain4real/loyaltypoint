@@ -14,6 +14,10 @@ return [
     |
     */
 
+    'loyalty' => [
+        'app_transfer_fee_percent' => (float) env('APP_TRANSFER_FEE_PERCENT', 5.0),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

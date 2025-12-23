@@ -10,6 +10,11 @@ use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
+beforeEach(function (): void {
+    // Set a known app fee for testing
+    config(['services.loyalty.app_transfer_fee_percent' => 5.0]);
+});
+
 describe('GET /api/v1/providers', function (): void {
     it('returns list of active providers', function (): void {
         Provider::factory()->count(3)->create();
@@ -26,8 +31,8 @@ describe('GET /api/v1/providers', function (): void {
                         'name',
                         'slug',
                         'is_active',
-                        'exchange_rate_base',
-                        'exchange_fee_percent',
+                        'points_to_value_ratio',
+                        'transfer_fee_percent',
                     ],
                 ],
             ]);
@@ -75,10 +80,18 @@ describe('GET /api/v1/providers/{provider}', function (): void {
 });
 
 describe('POST /api/v1/points/exchange/preview', function (): void {
-    it('returns exchange preview for authenticated user', function (): void {
+    it('returns detailed exchange preview for authenticated user', function (): void {
         $user = User::factory()->create();
-        $providerA = Provider::factory()->create(['slug' => 'provider-a', 'exchange_fee_percent' => 5.0]);
-        $providerB = Provider::factory()->create(['slug' => 'provider-b']);
+        $providerA = Provider::factory()->create([
+            'slug' => 'provider-a',
+            'points_to_value_ratio' => 0.1, // 10 points = $1
+            'transfer_fee_percent' => 1.5,
+        ]);
+        $providerB = Provider::factory()->create([
+            'slug' => 'provider-b',
+            'points_to_value_ratio' => 1.0, // 1 point = $1
+            'transfer_fee_percent' => 3.5,
+        ]);
 
         UserProviderBalance::create([
             'user_id' => $user->id,
@@ -91,24 +104,41 @@ describe('POST /api/v1/points/exchange/preview', function (): void {
         $response = $this->postJson('/api/v1/points/exchange/preview', [
             'from_provider' => 'provider-a',
             'to_provider' => 'provider-b',
-            'points' => 500,
+            'points' => 1000,
         ]);
 
+        // 1000 points × 0.1 = $100 gross
+        // Fees: 1.5% + 3.5% + 5% = 10% → $10
+        // Net: $90 → 90 points
         $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
                     'points_to_send',
+                    'from_provider' => ['slug', 'name', 'points_to_value_ratio', 'transfer_fee_percent'],
+                    'to_provider' => ['slug', 'name', 'points_to_value_ratio', 'transfer_fee_percent'],
                     'current_balance',
                     'sufficient_balance',
-                    'fee_amount',
-                    'fee_percent',
-                    'points_after_fee',
+                    'gross_value',
+                    'fees' => [
+                        'source_provider_fee' => ['percent', 'value'],
+                        'destination_provider_fee' => ['percent', 'value'],
+                        'app_fee' => ['percent', 'value'],
+                        'total' => ['percent', 'value'],
+                    ],
+                    'net_value',
                     'points_to_receive',
                 ],
             ])
-            ->assertJsonPath('data.points_to_send', 500)
-            ->assertJsonPath('data.fee_amount', 25)
+            ->assertJsonPath('data.points_to_send', 1000)
             ->assertJsonPath('data.sufficient_balance', true);
+
+        // Check calculated values
+        $data = $response->json('data');
+        expect((float) $data['gross_value'])->toBe(100.0);
+        expect((float) $data['fees']['total']['percent'])->toBe(10.0);
+        expect((float) $data['fees']['total']['value'])->toBe(10.0);
+        expect((float) $data['net_value'])->toBe(90.0);
+        expect($data['points_to_receive'])->toBe(90);
     });
 
     it('returns 401 for unauthenticated request', function (): void {
@@ -144,48 +174,20 @@ describe('POST /api/v1/points/exchange/preview', function (): void {
 });
 
 describe('POST /api/v1/points/exchange', function (): void {
-    it('executes exchange for authenticated user', function (): void {
+    it('executes exchange with value-based conversion', function (): void {
         $user = User::factory()->create();
-        $providerA = Provider::factory()->create(['slug' => 'provider-a', 'exchange_fee_percent' => 0]);
-        $providerB = Provider::factory()->create(['slug' => 'provider-b']);
-
-        UserProviderBalance::create([
-            'user_id' => $user->id,
-            'provider_id' => $providerA->id,
-            'balance' => 1000,
+        $providerA = Provider::factory()->create([
+            'slug' => 'provider-a',
+            'points_to_value_ratio' => 0.1,
+            'transfer_fee_percent' => 0,
+        ]);
+        $providerB = Provider::factory()->create([
+            'slug' => 'provider-b',
+            'points_to_value_ratio' => 1.0,
+            'transfer_fee_percent' => 0,
         ]);
 
-        Sanctum::actingAs($user);
-
-        $response = $this->postJson('/api/v1/points/exchange', [
-            'from_provider' => 'provider-a',
-            'to_provider' => 'provider-b',
-            'points' => 500,
-        ]);
-
-        $response->assertCreated()
-            ->assertJsonPath('data.points_sent', 500)
-            ->assertJsonPath('data.fee_deducted', 0)
-            ->assertJsonPath('data.points_received', 500)
-            ->assertJsonPath('message', 'Points exchanged successfully.')
-            ->assertJsonStructure([
-                'data' => [
-                    'points_sent',
-                    'fee_deducted',
-                    'points_received',
-                    'transfer_out',
-                    'transfer_in',
-                ],
-            ]);
-
-        expect($user->getBalanceForProvider($providerA))->toBe(500);
-        expect($user->getBalanceForProvider($providerB))->toBe(500);
-    });
-
-    it('applies exchange fee', function (): void {
-        $user = User::factory()->create();
-        $providerA = Provider::factory()->create(['slug' => 'provider-a', 'exchange_fee_percent' => 10.0]);
-        $providerB = Provider::factory()->create(['slug' => 'provider-b']);
+        config(['services.loyalty.app_transfer_fee_percent' => 0]);
 
         UserProviderBalance::create([
             'user_id' => $user->id,
@@ -201,10 +203,74 @@ describe('POST /api/v1/points/exchange', function (): void {
             'points' => 1000,
         ]);
 
+        // 1000 points × 0.1 = $100 → $100 / 1.0 = 100 points
         $response->assertCreated()
             ->assertJsonPath('data.points_sent', 1000)
-            ->assertJsonPath('data.fee_deducted', 100)
-            ->assertJsonPath('data.points_received', 900);
+            ->assertJsonPath('data.points_received', 100)
+            ->assertJsonPath('message', 'Points exchanged successfully.')
+            ->assertJsonStructure([
+                'data' => [
+                    'points_sent',
+                    'gross_value',
+                    'total_fee_percent',
+                    'total_fee_value',
+                    'net_value',
+                    'points_received',
+                    'transfer_out',
+                    'transfer_in',
+                ],
+            ]);
+
+        $data = $response->json('data');
+        expect((float) $data['gross_value'])->toBe(100.0);
+
+        expect($user->getBalanceForProvider($providerA))->toBe(0);
+        expect($user->getBalanceForProvider($providerB))->toBe(100);
+    });
+
+    it('applies all three fees correctly', function (): void {
+        $user = User::factory()->create();
+        $providerA = Provider::factory()->create([
+            'slug' => 'provider-a',
+            'points_to_value_ratio' => 0.1,
+            'transfer_fee_percent' => 1.5,
+        ]);
+        $providerB = Provider::factory()->create([
+            'slug' => 'provider-b',
+            'points_to_value_ratio' => 1.0,
+            'transfer_fee_percent' => 3.5,
+        ]);
+
+        config(['services.loyalty.app_transfer_fee_percent' => 5.0]);
+
+        UserProviderBalance::create([
+            'user_id' => $user->id,
+            'provider_id' => $providerA->id,
+            'balance' => 1000,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/points/exchange', [
+            'from_provider' => 'provider-a',
+            'to_provider' => 'provider-b',
+            'points' => 1000,
+        ]);
+
+        // 1000 points × 0.1 = $100 gross
+        // Total fee: 10% → $10
+        // Net: $90 → 90 points
+        $response->assertCreated()
+            ->assertJsonPath('data.points_sent', 1000)
+            ->assertJsonPath('data.points_received', 90);
+
+        $data = $response->json('data');
+        expect((float) $data['gross_value'])->toBe(100.0);
+        expect((float) $data['total_fee_percent'])->toBe(10.0);
+        expect((float) $data['total_fee_value'])->toBe(10.0);
+        expect((float) $data['net_value'])->toBe(90.0);
+
+        expect($user->getBalanceForProvider($providerB))->toBe(90);
     });
 
     it('returns 401 for unauthenticated request', function (): void {
