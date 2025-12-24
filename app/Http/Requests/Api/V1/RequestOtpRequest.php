@@ -22,9 +22,10 @@ class RequestOtpRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email', 'exists:users,email'],
+            'email' => ['required_without:vendor_email', 'nullable', 'string', 'email', 'exists:users,email'],
+            'vendor_email' => ['required_without:email', 'nullable', 'string', 'email'],
             'vendor_name' => ['required', 'string', 'max:255'],
-            'provider' => ['required', 'string', 'exists:providers,slug'],
+            'provider' => ['required_without:vendor_email', 'nullable', 'string', 'exists:providers,slug'],
         ];
     }
 
@@ -37,6 +38,9 @@ class RequestOtpRequest extends FormRequest
     {
         return [
             'email.exists' => 'No account found with this email address.',
+            'email.required_without' => 'Either email or vendor_email is required.',
+            'vendor_email.required_without' => 'Either email or vendor_email is required.',
+            'provider.required_without' => 'Provider is required when using platform email.',
             'provider.exists' => 'The specified provider does not exist.',
         ];
     }

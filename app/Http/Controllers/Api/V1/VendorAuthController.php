@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\RequestOtpRequest;
 use App\Http\Requests\Api\V1\VerifyOtpRequest;
 use App\Models\Provider;
 use App\Models\User;
+use App\Models\VendorUserLink;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 
@@ -19,21 +20,56 @@ class VendorAuthController extends Controller
     ) {}
 
     /**
-     * Request an OTP to be sent to the user's email.
+     * Request an OTP to be sent to vendor_email (for linked accounts) or platform email (for new accounts).
      */
     public function requestOtp(RequestOtpRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->validated('email'))->first();
-        $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+        // Resolve user: by vendor_email (linked) or platform email (new)
+        $vendorEmail = $request->validated('vendor_email');
+        $platformEmail = $request->validated('email');
 
-        // Verify provider is active
-        if (! $provider->is_active) {
-            return response()->json([
-                'message' => 'The specified provider is not active.',
-            ], 422);
+        if ($vendorEmail && ! $platformEmail) {
+            // Look up user by vendor_email link (provider derived from link)
+            $vendorLink = VendorUserLink::where('vendor_email', $vendorEmail)->first();
+
+            if (! $vendorLink) {
+                return response()->json([
+                    'message' => 'No account linked to this vendor email.',
+                ], 404);
+            }
+
+            $provider = $vendorLink->provider;
+            $user = $vendorLink->user;
+            $targetEmail = $vendorEmail;
+
+            // Check if provider is active
+            if (! $provider->is_active) {
+                return response()->json([
+                    'message' => 'The specified provider is not active.',
+                ], 422);
+            }
+        } else {
+            // Platform email flow - provider is required
+            $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+
+            // Verify provider is active
+            if (! $provider->is_active) {
+                return response()->json([
+                    'message' => 'The specified provider is not active.',
+                ], 422);
+            }
+            // Use platform email for new/unlinked accounts
+            $user = User::where('email', $platformEmail)->first();
+
+            // Check if user has a linked vendor email for this provider
+            $vendorLink = VendorUserLink::where('user_id', $user->id)
+                ->where('provider_id', $provider->id)
+                ->first();
+
+            $targetEmail = $vendorLink?->vendor_email ?? $user->email;
         }
 
-        $this->otpService->sendToEmail($user, 'vendor_auth');
+        $this->otpService->sendToEmail($user, 'vendor_auth', $targetEmail);
 
         return response()->json([
             'message' => 'Verification code sent to your email address.',
@@ -50,14 +86,42 @@ class VendorAuthController extends Controller
      */
     public function verifyOtp(VerifyOtpRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->validated('email'))->first();
-        $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+        // Resolve user: by vendor_email (linked) or platform email (new)
+        $vendorEmail = $request->validated('vendor_email');
+        $platformEmail = $request->validated('email');
 
-        // Verify provider is active
-        if (! $provider->is_active) {
-            return response()->json([
-                'message' => 'The specified provider is not active.',
-            ], 422);
+        if ($vendorEmail && ! $platformEmail) {
+            // Look up user by vendor_email link (provider derived from link)
+            $vendorLink = VendorUserLink::where('vendor_email', $vendorEmail)->first();
+
+            if (! $vendorLink) {
+                return response()->json([
+                    'message' => 'No account linked to this vendor email.',
+                ], 404);
+            }
+
+            $provider = $vendorLink->provider;
+            $user = $vendorLink->user;
+
+            // Verify provider is active
+            if (! $provider->is_active) {
+                return response()->json([
+                    'message' => 'The specified provider is not active.',
+                ], 422);
+            }
+        } else {
+            // Platform email flow - provider is required
+            $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+
+            // Verify provider is active
+            if (! $provider->is_active) {
+                return response()->json([
+                    'message' => 'The specified provider is not active.',
+                ], 422);
+            }
+
+            // Use platform email (for new linking or existing users)
+            $user = User::where('email', $platformEmail)->first();
         }
 
         $result = $this->otpService->verify(
@@ -72,13 +136,46 @@ class VendorAuthController extends Controller
             ], 422);
         }
 
+        $responseData = [];
+
+        // Handle vendor email linking (only when platform email is provided with vendor_email)
+        if ($vendorEmail && $platformEmail) {
+            // Check if this vendor email is already linked to a different user for this provider
+            $existingLink = VendorUserLink::where('vendor_email', $vendorEmail)
+                ->where('provider_id', $provider->id)
+                ->first();
+
+            if ($existingLink && $existingLink->user_id !== $user->id) {
+                return response()->json([
+                    'message' => 'This vendor email is already linked to another account for this provider.',
+                ], 422);
+            }
+
+            // Create or update the link
+            VendorUserLink::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'provider_id' => $provider->id,
+                ],
+                [
+                    'vendor_email' => $vendorEmail,
+                    'linked_at' => now(),
+                ]
+            );
+
+            $responseData['vendor_email'] = $vendorEmail;
+        } elseif ($vendorEmail) {
+            // Already linked, include vendor_email in response
+            $responseData['vendor_email'] = $vendorEmail;
+        }
+
         // Create token with vendor-specific abilities
         $token = $user->createToken(
             $request->validated('device_name'),
             ['points:read', 'transactions:read']
         )->plainTextToken;
 
-        return response()->json([
+        return response()->json(array_merge([
             'message' => 'Authentication successful.',
             'access_token' => $token,
             'token_type' => 'Bearer',
@@ -93,25 +190,61 @@ class VendorAuthController extends Controller
                 'slug' => $provider->slug,
             ],
             'points_balance' => $user->getBalanceForProvider($provider),
-        ]);
+        ], $responseData));
     }
 
     /**
-     * Resend the OTP to the user's email.
+     * Resend the OTP to vendor_email (for linked accounts) or platform email (for new accounts).
      */
     public function resendOtp(RequestOtpRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->validated('email'))->first();
-        $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+        // Resolve user: by vendor_email (linked) or platform email (new)
+        $vendorEmail = $request->validated('vendor_email');
+        $platformEmail = $request->validated('email');
 
-        // Verify provider is active
-        if (! $provider->is_active) {
-            return response()->json([
-                'message' => 'The specified provider is not active.',
-            ], 422);
+        if ($vendorEmail && ! $platformEmail) {
+            // Look up user by vendor_email link (provider derived from link)
+            $vendorLink = VendorUserLink::where('vendor_email', $vendorEmail)->first();
+
+            if (! $vendorLink) {
+                return response()->json([
+                    'message' => 'No account linked to this vendor email.',
+                ], 404);
+            }
+
+            $provider = $vendorLink->provider;
+            $user = $vendorLink->user;
+            $targetEmail = $vendorEmail;
+
+            // Check if provider is active
+            if (! $provider->is_active) {
+                return response()->json([
+                    'message' => 'The specified provider is not active.',
+                ], 422);
+            }
+        } else {
+            // Platform email flow - provider is required
+            $provider = Provider::where('slug', $request->validated('provider'))->firstOrFail();
+
+            // Verify provider is active
+            if (! $provider->is_active) {
+                return response()->json([
+                    'message' => 'The specified provider is not active.',
+                ], 422);
+            }
+
+            // Use platform email for new/unlinked accounts
+            $user = User::where('email', $platformEmail)->first();
+
+            // Check if user has a linked vendor email for this provider
+            $existingLink = VendorUserLink::where('user_id', $user->id)
+                ->where('provider_id', $provider->id)
+                ->first();
+
+            $targetEmail = $existingLink?->vendor_email ?? $user->email;
         }
 
-        $this->otpService->sendToEmail($user, 'vendor_auth');
+        $this->otpService->sendToEmail($user, 'vendor_auth', $targetEmail);
 
         return response()->json([
             'message' => 'A new verification code has been sent to your email address.',

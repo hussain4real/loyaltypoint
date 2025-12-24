@@ -18,16 +18,21 @@ All endpoints are prefixed with `/api/v1`.
    - [Request OTP](#post-vendorauthrequest-otp)
    - [Verify OTP](#post-vendorauthverify-otp)
    - [Resend OTP](#post-vendorauthresend-otp)
-3. [Providers](#providers)
+3. [Vendor Account Linking](#vendor-account-linking)
+   - [Lookup by Vendor Email](#get-vendorcustomersby-vendor-email)
+4. [Vendor Cross-Account Exchange](#vendor-cross-account-exchange)
+   - [Preview Vendor Exchange](#post-vendorpointsexchangepreview)
+   - [Execute Vendor Exchange](#post-vendorpointsexchange)
+5. [Providers](#providers)
    - [List Providers](#get-providers)
    - [Get Provider](#get-providersprovider)
-4. [Customer Points (Self-Service)](#customer-points-self-service)
+6. [Customer Points (Self-Service)](#customer-points-self-service)
    - [Get Balance](#get-pointsbalance)
    - [Get Transactions](#get-pointstransactions)
-5. [Point Exchange](#point-exchange)
+7. [Point Exchange](#point-exchange)
    - [Preview Exchange](#post-pointsexchangepreview)
    - [Execute Exchange](#post-pointsexchange)
-6. [Third-Party Customer Operations](#third-party-customer-operations)
+8. [Third-Party Customer Operations](#third-party-customer-operations)
    - [Get Customer Balance](#get-providersprovidercustomerscustomerpoints)
    - [Get Customer Transactions](#get-providersprovidercustomerscustomertransactions)
    - [Award Points](#post-providersprovidercustomerscustomerpointsaward)
@@ -201,11 +206,17 @@ Revoke all access tokens for the user (logout from all devices).
 
 ## Vendor OTP Authentication
 
-OTP-based authentication flow for vendor terminals. All vendor OTP endpoints require a `provider` slug to scope the authentication to a specific loyalty provider.
+OTP-based authentication flow for vendor terminals.
+
+### Two Authentication Flows
+
+1. **First-Time Linking (Platform Email)**: Use `email` (platform email) to identify and authenticate a user. Requires `provider`. Include `vendor_email` during verification to create the link.
+
+2. **Linked Account Authentication (Vendor Email)**: Once an account is linked, use `vendor_email` alone to identify the user. No `provider` needed - it's automatically derived from the link. The OTP will be sent to the vendor_email address.
 
 ### POST /vendor/auth/request-otp
 
-Send a one-time password to the user's email for a specific provider.
+Send a one-time password to authenticate a user for a specific provider.
 
 **Authentication:** None (Public)
 
@@ -213,17 +224,27 @@ Send a one-time password to the user's email for a specific provider.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `email` | string | Yes | Registered user's email |
+| `email` | string | Required if no `vendor_email` | User's platform email (for first-time linking) |
+| `vendor_email` | string | Required if no `email` | Vendor's customer email (for linked accounts) |
 | `vendor_name` | string | Yes | Vendor/terminal identifier |
-| `provider` | string | Yes | Provider slug (e.g., `loyalty-plus`) |
+| `provider` | string | Required with `email` | Provider slug (e.g., `loyalty-plus`) |
 
-**Example Request:**
+**Example Request (First-Time - Platform Email):**
 
 ```json
 {
   "email": "alice@example.com",
   "vendor_name": "Store Terminal #1",
   "provider": "loyalty-plus"
+}
+```
+
+**Example Request (Linked Account - Vendor Email):**
+
+```json
+{
+  "vendor_email": "alice.customer@vendor.com",
+  "vendor_name": "Store Terminal #1"
 }
 ```
 
@@ -237,6 +258,16 @@ Send a one-time password to the user's email for a specific provider.
     "name": "Loyalty Plus",
     "slug": "loyalty-plus"
   }
+}
+```
+
+**Error Response (404) - Vendor Email Not Linked:**
+
+When using `vendor_email` but no account is linked:
+
+```json
+{
+  "message": "No linked account found for this vendor email."
 }
 ```
 
@@ -271,19 +302,41 @@ Verify the OTP code and receive an access token with provider-scoped balance.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `email` | string | Yes | User's email |
+| `email` | string | Required if no `vendor_email` | User's platform email (for first-time linking) |
+| `vendor_email` | string | Required if no `email` | Vendor's customer email (for linked accounts, or to link during verification) |
 | `code` | string | Yes | 6-digit OTP code |
 | `device_name` | string | Yes | Device/terminal identifier |
-| `provider` | string | Yes | Provider slug |
+| `provider` | string | Required with `email` | Provider slug |
 
-**Example Request:**
+#### First-Time Linking Flow
+
+When using `email` with `vendor_email`, a link is created between the vendor's customer email and the platform user. This enables:
+- **Account persistence**: When vendor apps are reinstalled, the vendor can look up which platform user is linked to their customer email
+- **Cross-account exchange**: Customers can exchange points between different platform accounts linked to the same vendor email
+
+**Example Request (First-Time Linking):**
 
 ```json
 {
   "email": "alice@example.com",
   "code": "123456",
   "device_name": "Store Terminal #1",
-  "provider": "loyalty-plus"
+  "provider": "loyalty-plus",
+  "vendor_email": "alice.customer@vendor.com"
+}
+```
+
+#### Linked Account Flow
+
+Once linked, use `vendor_email` alone to authenticate:
+
+**Example Request (Linked Account):**
+
+```json
+{
+  "vendor_email": "alice.customer@vendor.com",
+  "code": "123456",
+  "device_name": "Store Terminal #1"
 }
 ```
 
@@ -308,11 +361,31 @@ Verify the OTP code and receive an access token with provider-scoped balance.
 }
 ```
 
-**Error Response (422):**
+**Error Response (404) - Vendor Email Not Linked:**
+
+When using `vendor_email` only but no account is linked:
+
+```json
+{
+  "message": "No linked account found for this vendor email."
+}
+```
+
+**Error Response (422 - Invalid OTP):**
 
 ```json
 {
   "message": "Invalid or expired verification code."
+}
+```
+
+**Error Response (422 - Vendor Email Already Linked):**
+
+When the vendor_email is already linked to a different platform user for this provider:
+
+```json
+{
+  "message": "This vendor email is already linked to a different user for this provider."
 }
 ```
 
@@ -328,17 +401,27 @@ Resend a new OTP code (invalidates previous codes).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `email` | string | Yes | Registered user's email |
+| `email` | string | Required if no `vendor_email` | User's platform email (for first-time linking) |
+| `vendor_email` | string | Required if no `email` | Vendor's customer email (for linked accounts) |
 | `vendor_name` | string | Yes | Vendor/terminal identifier |
-| `provider` | string | Yes | Provider slug |
+| `provider` | string | Required with `email` | Provider slug |
 
-**Example Request:**
+**Example Request (First-Time - Platform Email):**
 
 ```json
 {
   "email": "alice@example.com",
   "vendor_name": "Store Terminal #1",
   "provider": "loyalty-plus"
+}
+```
+
+**Example Request (Linked Account - Vendor Email):**
+
+```json
+{
+  "vendor_email": "alice.customer@vendor.com",
+  "vendor_name": "Store Terminal #1"
 }
 ```
 
@@ -352,6 +435,329 @@ Resend a new OTP code (invalidates previous codes).
     "name": "Loyalty Plus",
     "slug": "loyalty-plus"
   }
+}
+```
+
+**Error Response (404) - Vendor Email Not Linked:**
+
+When using `vendor_email` but no account is linked:
+
+```json
+{
+  "message": "No linked account found for this vendor email."
+}
+```
+
+---
+
+## Vendor Account Linking
+
+Vendor account linking allows vendors to maintain a persistent relationship between their customer emails and platform users. This is useful when:
+- Vendor apps are reinstalled and need to recover the linked platform account
+- Cross-account exchanges are needed (exchanging points between different platform users)
+
+### GET /vendor/customers/by-vendor-email
+
+Look up all platform accounts linked to a vendor email. Returns linked accounts with their point balances.
+
+**Authentication:** Bearer Token (Vendor token with provider scope)
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `vendor_email` | string | Yes | The vendor's customer email |
+| `provider` | string | No | Filter by specific provider slug |
+
+**Example Request:**
+
+```
+GET /api/v1/vendor/customers/by-vendor-email?vendor_email=alice@vendor.com
+Authorization: Bearer {vendor_token}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "vendor_email": "alice@vendor.com",
+  "linked_accounts": [
+    {
+      "provider": {
+        "id": 1,
+        "name": "Airline Miles",
+        "slug": "airline-miles"
+      },
+      "user": {
+        "id": 1,
+        "name": "Alice Smith",
+        "email": "alice@example.com"
+      },
+      "points_balance": 5000,
+      "linked_at": "2025-01-15T10:30:00.000000Z"
+    },
+    {
+      "provider": {
+        "id": 2,
+        "name": "Rewards Hub",
+        "slug": "rewards-hub"
+      },
+      "user": {
+        "id": 2,
+        "name": "Alice Johnson",
+        "email": "alice.work@example.com"
+      },
+      "points_balance": 1500,
+      "linked_at": "2025-01-16T14:20:00.000000Z"
+    }
+  ]
+}
+```
+
+**Success Response with Provider Filter (200):**
+
+```
+GET /api/v1/vendor/customers/by-vendor-email?vendor_email=alice@vendor.com&provider=airline-miles
+```
+
+```json
+{
+  "vendor_email": "alice@vendor.com",
+  "linked_accounts": [
+    {
+      "provider": {
+        "id": 1,
+        "name": "Airline Miles",
+        "slug": "airline-miles"
+      },
+      "user": {
+        "id": 1,
+        "name": "Alice Smith",
+        "email": "alice@example.com"
+      },
+      "points_balance": 5000,
+      "linked_at": "2025-01-15T10:30:00.000000Z"
+    }
+  ]
+}
+```
+
+**Error Response (422 - Validation Error):**
+
+```json
+{
+  "message": "The vendor email field is required.",
+  "errors": {
+    "vendor_email": ["The vendor email field is required."]
+  }
+}
+```
+
+**Error Response (404 - No Links Found):**
+
+```json
+{
+  "message": "No linked accounts found for this vendor email."
+}
+```
+
+---
+
+## Vendor Cross-Account Exchange
+
+Vendor cross-account exchange allows vendors to facilitate point exchanges between different platform users who are linked to the same vendor email. This is useful when a customer has multiple platform accounts (e.g., personal and work) and wants to consolidate or transfer points between them.
+
+**How it works:**
+1. Both platform accounts must be linked to the same vendor email
+2. The exchange uses value-based conversion (points → dollars → points)
+3. Three-tier fee structure applies: source provider fee, destination provider fee, and app fee
+
+### POST /vendor/points/exchange/preview
+
+Preview a cross-account exchange without executing it. Returns detailed breakdown of fees and conversion.
+
+**Authentication:** Bearer Token (Vendor token with provider scope)
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `vendor_email` | string | Yes | The vendor's customer email (umbrella identity) |
+| `from_provider` | string | Yes | Source provider slug |
+| `to_provider` | string | Yes | Destination provider slug (must be different from source) |
+| `points` | integer | Yes | Number of points to exchange from source |
+
+**Example Request:**
+
+```json
+{
+  "vendor_email": "alice@vendor.com",
+  "from_provider": "airline-miles",
+  "to_provider": "rewards-hub",
+  "points": 1000
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "preview": {
+    "from_account": {
+      "user": {
+        "id": 1,
+        "name": "Alice Smith",
+        "email": "alice@example.com"
+      },
+      "provider": {
+        "id": 1,
+        "name": "Airline Miles",
+        "slug": "airline-miles"
+      },
+      "current_balance": 5000,
+      "balance_after": 4000
+    },
+    "to_account": {
+      "user": {
+        "id": 2,
+        "name": "Alice Johnson",
+        "email": "alice.work@example.com"
+      },
+      "provider": {
+        "id": 2,
+        "name": "Rewards Hub",
+        "slug": "rewards-hub"
+      },
+      "current_balance": 1500,
+      "balance_after": 2400
+    },
+    "exchange": {
+      "points_to_exchange": 1000,
+      "source_value": 100.00,
+      "source_fee_rate": 0.05,
+      "source_fee": 5.00,
+      "value_after_source_fee": 95.00,
+      "app_fee_rate": 0.02,
+      "app_fee": 1.90,
+      "value_after_app_fee": 93.10,
+      "destination_fee_rate": 0.03,
+      "destination_fee": 2.79,
+      "net_value": 90.31,
+      "destination_ratio": 0.10,
+      "points_to_receive": 903
+    }
+  }
+}
+```
+
+**Error Response (404 - No Link for Provider):**
+
+```json
+{
+  "message": "No account linked for source provider."
+}
+```
+
+**Error Response (422 - Insufficient Balance):**
+
+```json
+{
+  "message": "Insufficient points balance for exchange."
+}
+```
+
+---
+
+### POST /vendor/points/exchange
+
+Execute a cross-account exchange between two platform users linked to the same vendor email.
+
+**Authentication:** Bearer Token (Vendor token with provider scope)
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `vendor_email` | string | Yes | The vendor's customer email (umbrella identity) |
+| `from_provider` | string | Yes | Source provider slug |
+| `to_provider` | string | Yes | Destination provider slug (must be different from source) |
+| `points` | integer | Yes | Number of points to exchange from source |
+
+**Example Request:**
+
+```json
+{
+  "vendor_email": "alice@vendor.com",
+  "from_provider": "airline-miles",
+  "to_provider": "rewards-hub",
+  "points": 1000
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "message": "Exchange completed successfully.",
+  "exchange": {
+    "exchange_id": "abc12345-def6-7890-ghij-klmnopqrstuv",
+    "from_account": {
+      "user": {
+        "id": 1,
+        "name": "Alice Smith",
+        "email": "alice@example.com"
+      },
+      "provider": {
+        "id": 1,
+        "name": "Airline Miles",
+        "slug": "airline-miles"
+      },
+      "points_deducted": 1000,
+      "new_balance": 4000
+    },
+    "to_account": {
+      "user": {
+        "id": 2,
+        "name": "Alice Johnson",
+        "email": "alice.work@example.com"
+      },
+      "provider": {
+        "id": 2,
+        "name": "Rewards Hub",
+        "slug": "rewards-hub"
+      },
+      "points_received": 903,
+      "new_balance": 2403
+    },
+    "fees": {
+      "source_fee": 5.00,
+      "app_fee": 1.90,
+      "destination_fee": 2.79,
+      "total_fees": 9.69
+    },
+    "conversion": {
+      "source_value": 100.00,
+      "net_value": 90.31
+    }
+  }
+}
+```
+
+**Error Response (404 - No Link for Provider):**
+
+```json
+{
+  "message": "No account linked for destination provider."
+}
+```
+
+**Error Response (422 - Same User):**
+
+When both providers are linked to the same platform user:
+
+```json
+{
+  "message": "Both providers are linked to the same user. Use regular exchange instead."
 }
 ```
 

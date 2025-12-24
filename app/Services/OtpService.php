@@ -41,13 +41,14 @@ class OtpService
     }
 
     /**
-     * Send OTP to user's email.
+     * Send OTP to user's email or a specified email address.
      */
-    public function sendToEmail(User $user, string $purpose = 'vendor_auth'): Otp
+    public function sendToEmail(User $user, string $purpose = 'vendor_auth', ?string $toEmail = null): Otp
     {
         $otp = $this->generate($user, $purpose);
 
-        Mail::to($user->email)->send(new OtpMail($otp));
+        $email = $toEmail ?? $user->email;
+        Mail::to($email)->send(new OtpMail($otp));
 
         return $otp;
     }

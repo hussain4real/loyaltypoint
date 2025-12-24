@@ -92,4 +92,14 @@ class User extends Authenticatable
             ['balance' => 0]
         );
     }
+
+    /**
+     * Get all vendor links for this user.
+     *
+     * @return HasMany<VendorUserLink, $this>
+     */
+    public function vendorLinks(): HasMany
+    {
+        return $this->hasMany(VendorUserLink::class);
+    }
 }
