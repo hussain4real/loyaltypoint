@@ -218,10 +218,10 @@
         },
         {
             "name": "Vendor OTP Authentication",
-            "description": "OTP-based authentication flow for vendor terminals. All endpoints require a provider slug to scope authentication to a specific loyalty provider.",
+            "description": "OTP-based authentication flow for vendor terminals.\n\n## Two Authentication Flows\n\n### 1. First-Time Linking (Platform Email)\nUse `email` (platform email) to identify and authenticate a user. Requires `provider`. Include `vendor_email` during verification to create the link.\n\n### 2. Linked Account Authentication (Vendor Email)\nOnce an account is linked, use `vendor_email` alone to identify the user. No `provider` needed - it's derived from the link. The OTP will be sent to the vendor_email address.",
             "item": [
                 {
-                    "name": "Request OTP",
+                    "name": "Request OTP (Platform Email)",
                     "request": {
                         "auth": {
                             "type": "noauth"
@@ -252,12 +252,48 @@
                                 "request-otp"
                             ]
                         },
-                        "description": "Send a one-time password to the user's email for a specific provider.\n\nThe OTP expires in 10 minutes.\n\n**Required fields:**\n- `email` - User's registered email\n- `vendor_name` - Vendor/terminal identifier\n- `provider` - Provider slug (e.g., `loyalty-plus`)"
+                        "description": "Send a one-time password to the user's platform email for first-time linking.\n\nThe OTP expires in 10 minutes.\n\n**Use this for first-time authentication** when the account is not yet linked to a vendor_email.\n\n**Required fields:**\n- `email` - User's registered platform email\n- `vendor_name` - Vendor/terminal identifier\n- `provider` - Provider slug (e.g., `loyalty-plus`)"
                     },
                     "response": []
                 },
                 {
-                    "name": "Verify OTP",
+                    "name": "Request OTP (Vendor Email - Linked)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"vendor_email\": \"alice.customer@vendor.com\",\n    \"vendor_name\": \"Store Terminal #1\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/auth/request-otp",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "auth",
+                                "request-otp"
+                            ]
+                        },
+                        "description": "Send a one-time password to the vendor_email for already-linked accounts.\n\nThe OTP expires in 10 minutes.\n\n**Use this for returning customers** whose account is already linked to this vendor_email.\n\n**Required fields:**\n- `vendor_email` - Vendor's customer email (must be already linked)\n- `vendor_name` - Vendor/terminal identifier\n\n**Note:** Provider is automatically derived from the link. Returns 404 if no account is linked to this vendor_email."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Verify OTP (First-Time Linking)",
                     "event": [
                         {
                             "listen": "test",
@@ -292,7 +328,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"email\": \"alice@example.com\",\n    \"code\": \"123456\",\n    \"device_name\": \"Store Terminal #1\",\n    \"provider\": \"{{provider_slug}}\"\n}"
+                            "raw": "{\n    \"email\": \"alice@example.com\",\n    \"code\": \"123456\",\n    \"device_name\": \"Store Terminal #1\",\n    \"provider\": \"{{provider_slug}}\",\n    \"vendor_email\": \"alice.customer@vendor.com\"\n}"
                         },
                         "url": {
                             "raw": "{{base_url}}/vendor/auth/verify-otp",
@@ -305,12 +341,65 @@
                                 "verify-otp"
                             ]
                         },
-                        "description": "Verify the OTP code and receive an access token with provider-scoped balance.\n\nReplace `123456` with the actual code received via email.\n\nThe response includes the user's point balance for the specified provider only.\n\nThe token is automatically saved to the `auth_token` collection variable."
+                        "description": "Verify the OTP code and create a link between the platform user and vendor_email.\n\nReplace `123456` with the actual code received via email.\n\n**Use this for first-time linking** to associate the vendor's customer email with the platform user.\n\n**Required fields:**\n- `email` - User's platform email (used to look up user)\n- `code` - OTP code from email\n- `device_name` - Device identifier for the token\n- `provider` - Provider slug\n- `vendor_email` - Vendor's customer email to link\n\n**What happens:**\n1. User is verified via platform email + OTP\n2. A link is created between vendor_email and this user for this provider\n3. Future authentications can use vendor_email alone\n\nThe token is automatically saved to the `auth_token` collection variable."
                     },
                     "response": []
                 },
                 {
-                    "name": "Resend OTP",
+                    "name": "Verify OTP (Vendor Email - Linked)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.access_token) {",
+                                    "        pm.collectionVariables.set('auth_token', jsonData.access_token);",
+                                    "        console.log('Token saved to auth_token variable');",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"vendor_email\": \"alice.customer@vendor.com\",\n    \"code\": \"123456\",\n    \"device_name\": \"Store Terminal #1\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/auth/verify-otp",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "auth",
+                                "verify-otp"
+                            ]
+                        },
+                        "description": "Verify the OTP code for a linked account using vendor_email.\n\nReplace `123456` with the actual code received at the vendor_email.\n\n**Use this for returning customers** whose account is already linked.\n\n**Required fields:**\n- `vendor_email` - Vendor's customer email (must be linked)\n- `code` - OTP code from vendor_email\n- `device_name` - Device identifier for the token\n\n**Note:** Provider is automatically derived from the link. Returns 404 if no account is linked to this vendor_email.\n\nThe token is automatically saved to the `auth_token` collection variable."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Resend OTP (Platform Email)",
                     "request": {
                         "auth": {
                             "type": "noauth"
@@ -341,7 +430,160 @@
                                 "resend-otp"
                             ]
                         },
-                        "description": "Resend a new OTP code for the specified provider. This invalidates any previous OTP codes."
+                        "description": "Resend a new OTP code to the user's platform email. This invalidates any previous OTP codes.\n\n**Use for first-time authentication** when the account is not yet linked."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Resend OTP (Vendor Email - Linked)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"vendor_email\": \"alice.customer@vendor.com\",\n    \"vendor_name\": \"Store Terminal #1\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/auth/resend-otp",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "auth",
+                                "resend-otp"
+                            ]
+                        },
+                        "description": "Resend a new OTP code to the linked vendor_email. This invalidates any previous OTP codes.\n\n**Use for returning customers** whose account is already linked.\n\n**Note:** Provider is automatically derived from the link. Returns 404 if no account is linked to this vendor_email."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Vendor Account Linking",
+            "description": "Vendor account linking allows vendors to maintain a persistent relationship between their customer emails and platform users.",
+            "item": [
+                {
+                    "name": "Lookup by Vendor Email",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/vendor/customers/by-vendor-email?vendor_email=alice@vendor.com",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "customers",
+                                "by-vendor-email"
+                            ],
+                            "query": [
+                                {
+                                    "key": "vendor_email",
+                                    "value": "alice@vendor.com",
+                                    "description": "The vendor's customer email"
+                                },
+                                {
+                                    "key": "provider",
+                                    "value": "{{provider_slug}}",
+                                    "description": "Optional: Filter by provider slug",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Look up all platform accounts linked to a vendor email.\n\nReturns linked accounts with their point balances for each provider.\n\n**Query Parameters:**\n- `vendor_email` (required) - The vendor's customer email\n- `provider` (optional) - Filter by specific provider slug"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Vendor Cross-Account Exchange",
+            "description": "Vendor cross-account exchange allows vendors to facilitate point exchanges between different platform users who are linked to the same vendor email.",
+            "item": [
+                {
+                    "name": "Preview Exchange",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"vendor_email\": \"alice@vendor.com\",\n    \"from_provider\": \"airline-miles\",\n    \"to_provider\": \"rewards-hub\",\n    \"points\": 1000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/points/exchange/preview",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "points",
+                                "exchange",
+                                "preview"
+                            ]
+                        },
+                        "description": "Preview a cross-account exchange without executing it.\n\nReturns detailed breakdown of fees and conversion including:\n- From/To account details with current and projected balances\n- Three-tier fee structure (source fee, app fee, destination fee)\n- Value-based conversion calculation"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Execute Exchange",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"vendor_email\": \"alice@vendor.com\",\n    \"from_provider\": \"airline-miles\",\n    \"to_provider\": \"rewards-hub\",\n    \"points\": 1000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vendor/points/exchange",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "points",
+                                "exchange"
+                            ]
+                        },
+                        "description": "Execute a cross-account exchange between two platform users linked to the same vendor email.\n\n**Requirements:**\n- Both platform accounts must be linked to the same vendor email\n- Source account must have sufficient balance\n- Exchange must result in at least 1 point received\n\n**How it works:**\n1. Points are deducted from source user's account\n2. Value-based conversion with three-tier fees is applied\n3. Points are credited to destination user's account\n4. Both transactions are linked via exchange_id"
                     },
                     "response": []
                 }

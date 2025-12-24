@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\ExchangeController;
 use App\Http\Controllers\Api\V1\PointController;
 use App\Http\Controllers\Api\V1\ProviderController;
 use App\Http\Controllers\Api\V1\VendorAuthController;
+use App\Http\Controllers\Api\V1\VendorCustomerController;
+use App\Http\Controllers\Api\V1\VendorExchangeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +32,13 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/verify-otp', [VendorAuthController::class, 'verifyOtp']);
         Route::post('/resend-otp', [VendorAuthController::class, 'resendOtp']);
     });
+
+    // Vendor customer lookup (public - for vendor apps to find linked accounts)
+    Route::get('/vendor/customers/by-vendor-email', [VendorCustomerController::class, 'lookupByVendorEmail']);
+
+    // Vendor cross-account exchange (public - uses vendor_email for identity)
+    Route::post('/vendor/points/exchange/preview', [VendorExchangeController::class, 'preview']);
+    Route::post('/vendor/points/exchange', [VendorExchangeController::class, 'exchange']);
 
     // Public provider listing
     Route::get('/providers', [ProviderController::class, 'index']);

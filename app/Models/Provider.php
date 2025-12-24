@@ -79,4 +79,14 @@ class Provider extends Model
     {
         return 'slug';
     }
+
+    /**
+     * Get all vendor links for this provider.
+     *
+     * @return HasMany<VendorUserLink, $this>
+     */
+    public function vendorLinks(): HasMany
+    {
+        return $this->hasMany(VendorUserLink::class);
+    }
 }
