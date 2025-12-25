@@ -50,7 +50,14 @@ class VendorPointController extends Controller
                 'provider' => [
                     'id' => $link->provider->id,
                     'name' => $link->provider->name,
+                    'trade_name' => $link->provider->trade_name,
                     'slug' => $link->provider->slug,
+                    'category' => $link->provider->category,
+                    'description' => $link->provider->description,
+                    'official_logo' => $link->provider->official_logo,
+                    'web_link' => $link->provider->web_link,
+                    'points_to_value_ratio' => (float) $link->provider->points_to_value_ratio,
+                    'transfer_fee_percent' => (float) $link->provider->transfer_fee_percent,
                 ],
                 'points_balance' => (int) $balance,
             ];
