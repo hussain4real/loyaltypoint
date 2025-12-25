@@ -8,7 +8,7 @@
     "variable": [
         {
             "key": "base_url",
-            "value": "http://loyalty-point.test/api/v1",
+            "value": "http://127.0.0.1:8000/api/v1",
             "type": "string"
         },
         {
@@ -584,6 +584,104 @@
                             ]
                         },
                         "description": "Execute a cross-account exchange between two platform users linked to the same vendor email.\n\n**Requirements:**\n- Both platform accounts must be linked to the same vendor email\n- Source account must have sufficient balance\n- Exchange must result in at least 1 point received\n\n**How it works:**\n1. Points are deducted from source user's account\n2. Value-based conversion with three-tier fees is applied\n3. Points are credited to destination user's account\n4. Both transactions are linked via exchange_id"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Vendor Points",
+            "description": "Vendor-scoped point endpoints for authenticated users. These endpoints automatically scope to the provider linked via vendor_email - no provider parameter needed.\n\n**Requires:** Bearer token from vendor OTP authentication.",
+            "item": [
+                {
+                    "name": "Get Balance (Auto-Scoped)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/vendor/points/balance",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "points",
+                                "balance"
+                            ]
+                        },
+                        "description": "Get the authenticated user's point balance for their linked provider.\n\n**Auto-scoped:** No provider parameter needed - automatically uses the provider from the vendor account link.\n\n**Returns 400** if the user has no vendor account link. In that case, use the standard `/points/balance?provider=` endpoint instead."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Transactions (Auto-Scoped)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/vendor/points/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "points",
+                                "transactions"
+                            ]
+                        },
+                        "description": "Get the authenticated user's transaction history for their linked provider.\n\n**Auto-scoped:** No provider parameter needed - automatically uses the provider from the vendor account link.\n\n**Returns 400** if the user has no vendor account link. In that case, use the standard `/points/transactions?provider=` endpoint instead."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Transactions (Filtered)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/vendor/points/transactions?from=2025-01-01&to=2025-12-31&per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vendor",
+                                "points",
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2025-01-01",
+                                    "description": "Filter transactions from this date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2025-12-31",
+                                    "description": "Filter transactions up to this date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "description": "Number of results per page (max 100)"
+                                }
+                            ]
+                        },
+                        "description": "Get the authenticated user's transaction history with date filters.\n\n**Query Parameters:**\n- `from` - Filter from date (YYYY-MM-DD)\n- `to` - Filter to date (YYYY-MM-DD)\n- `per_page` - Results per page (default 15, max 100)"
                     },
                     "response": []
                 }
