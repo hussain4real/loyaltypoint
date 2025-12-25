@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\ProviderController;
 use App\Http\Controllers\Api\V1\VendorAuthController;
 use App\Http\Controllers\Api\V1\VendorCustomerController;
 use App\Http\Controllers\Api\V1\VendorExchangeController;
+use App\Http\Controllers\Api\V1\VendorPointController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,12 @@ Route::prefix('v1')->group(function (): void {
     // Vendor cross-account exchange (public - uses vendor_email for identity)
     Route::post('/vendor/points/exchange/preview', [VendorExchangeController::class, 'preview']);
     Route::post('/vendor/points/exchange', [VendorExchangeController::class, 'exchange']);
+
+    // Vendor point endpoints (authenticated - auto-scoped to linked provider)
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::get('/vendor/points/balance', [VendorPointController::class, 'balance']);
+        Route::get('/vendor/points/transactions', [VendorPointController::class, 'transactions']);
+    });
 
     // Public provider listing
     Route::get('/providers', [ProviderController::class, 'index']);

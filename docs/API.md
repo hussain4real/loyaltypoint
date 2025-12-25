@@ -23,16 +23,19 @@ All endpoints are prefixed with `/api/v1`.
 4. [Vendor Cross-Account Exchange](#vendor-cross-account-exchange)
    - [Preview Vendor Exchange](#post-vendorpointsexchangepreview)
    - [Execute Vendor Exchange](#post-vendorpointsexchange)
-5. [Providers](#providers)
+5. [Vendor Points (Auto-Scoped)](#vendor-points-auto-scoped)
+   - [Get Balance](#get-vendorpointsbalance)
+   - [Get Transactions](#get-vendorpointstransactions)
+6. [Providers](#providers)
    - [List Providers](#get-providers)
    - [Get Provider](#get-providersprovider)
-6. [Customer Points (Self-Service)](#customer-points-self-service)
+7. [Customer Points (Self-Service)](#customer-points-self-service)
    - [Get Balance](#get-pointsbalance)
    - [Get Transactions](#get-pointstransactions)
-7. [Point Exchange](#point-exchange)
+8. [Point Exchange](#point-exchange)
    - [Preview Exchange](#post-pointsexchangepreview)
    - [Execute Exchange](#post-pointsexchange)
-8. [Third-Party Customer Operations](#third-party-customer-operations)
+9. [Third-Party Customer Operations](#third-party-customer-operations)
    - [Get Customer Balance](#get-providersprovidercustomerscustomerpoints)
    - [Get Customer Transactions](#get-providersprovidercustomerscustomertransactions)
    - [Award Points](#post-providersprovidercustomerscustomerpointsaward)
@@ -758,6 +761,151 @@ When both providers are linked to the same platform user:
 ```json
 {
   "message": "Both providers are linked to the same user. Use regular exchange instead."
+}
+```
+
+---
+
+## Vendor Points (Auto-Scoped)
+
+These endpoints are designed for vendor-authenticated users who have linked their account via vendor email. They return data for **all accounts** linked to the same vendor email (including across different platform users), eliminating the need to specify a provider parameter.
+
+**Key Feature:** If a vendor email like `alice@vendor.com` is linked to multiple platform accounts (e.g., `alice@personal.com` and `alice@work.com`), these endpoints return balances and transactions for ALL of them.
+
+**Note:** These endpoints return a `400` error if the authenticated user has no vendor links.
+
+### GET /vendor/points/balance
+
+Get point balances for all accounts linked to the same vendor email.
+
+**Authentication:** Bearer Token (User authenticated via vendor OTP)
+
+**Success Response (200):**
+
+```json
+{
+  "data": [
+    {
+      "user": {
+        "id": 1,
+        "name": "Alice Personal",
+        "email": "alice@personal.com"
+      },
+      "provider": {
+        "id": 1,
+        "name": "Loyalty Plus",
+        "slug": "loyalty-plus"
+      },
+      "points_balance": 625
+    },
+    {
+      "user": {
+        "id": 1,
+        "name": "Alice Personal",
+        "email": "alice@personal.com"
+      },
+      "provider": {
+        "id": 2,
+        "name": "Rewards Hub",
+        "slug": "rewards-hub"
+      },
+      "points_balance": 1500
+    },
+    {
+      "user": {
+        "id": 2,
+        "name": "Alice Work",
+        "email": "alice@work.com"
+      },
+      "provider": {
+        "id": 3,
+        "name": "Bonus Network",
+        "slug": "bonus-network"
+      },
+      "points_balance": 1950
+    }
+  ]
+}
+```
+
+**Error Response (400 - No Vendor Link):**
+
+```json
+{
+  "message": "No vendor account linked. Use the standard /points/balance endpoint with ?provider= parameter."
+}
+```
+
+---
+
+### GET /vendor/points/transactions
+
+Get transaction history for all accounts linked to the same vendor email.
+
+**Authentication:** Bearer Token (User authenticated via vendor OTP)
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `from` | date | No | Filter transactions from this date (Y-m-d) |
+| `to` | date | No | Filter transactions up to this date (Y-m-d) |
+| `per_page` | integer | No | Number of results per page (default: 15) |
+
+**Success Response (200):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "type": "earned",
+      "points": 500,
+      "description": "Purchase reward",
+      "meta": null,
+      "provider": {
+        "id": 1,
+        "name": "Loyalty Plus",
+        "slug": "loyalty-plus"
+      },
+      "created_at": "2024-01-15T10:30:00.000000Z"
+    },
+    {
+      "id": 2,
+      "type": "redeemed",
+      "points": -100,
+      "description": "Redeemed for discount",
+      "meta": null,
+      "provider": {
+        "id": 2,
+        "name": "Rewards Hub",
+        "slug": "rewards-hub"
+      },
+      "created_at": "2024-01-14T14:20:00.000000Z"
+    }
+  ],
+  "links": {
+    "first": "http://loyalty-point.test/api/v1/vendor/points/transactions?page=1",
+    "last": "http://loyalty-point.test/api/v1/vendor/points/transactions?page=1",
+    "prev": null,
+    "next": null
+  },
+  "meta": {
+    "current_page": 1,
+    "from": 1,
+    "last_page": 1,
+    "per_page": 15,
+    "to": 2,
+    "total": 2
+  }
+}
+```
+
+**Error Response (400 - No Vendor Link):**
+
+```json
+{
+  "message": "No vendor account linked. Use the standard /points/transactions endpoint with ?provider= parameter."
 }
 ```
 
