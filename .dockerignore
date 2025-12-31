@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Development
+.env
+.env.local
+.env.*.local
+.vscode
+.idea
+.editorconfig
+
+# Documentation
+README.md
+GEMINI.md
+docs/
+specs/
+.specify/
+.gemini/
+.github/
+
+# Testing
+tests/
+phpunit.xml
+.phpunit.result.cache
+coverage/
+
+# Development dependencies
+node_modules/
+
+# Build artifacts (we copy these from build stages)
+public/build/
+vendor/
+
+# Bootstrap cache (regenerated at build time)
+bootstrap/cache/*.php
+
+# Storage (will be created at runtime)
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/*
+
+# Keep .gitkeep files
+!storage/**/.gitkeep
+
+# Local development
+docker-compose*.yml
+*.log
+.DS_Store
+Thumbs.db
+
+# CI/CD
+cloudbuild.yaml
+
+# Misc
+*.md
+!vendor/**/*.md
+boost.json
