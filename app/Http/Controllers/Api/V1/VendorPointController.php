@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\PointTransactionResource;
 use App\Models\PointTransaction;
+use App\Models\UserProviderBalance;
 use App\Models\VendorUserLink;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,9 +38,9 @@ class VendorPointController extends Controller
 
         // Build balances for all linked providers across all users
         $balances = $allLinks->map(function ($link) {
-            $balance = $link->user->pointTransactions()
+            $balanceRecord = UserProviderBalance::where('user_id', $link->user_id)
                 ->where('provider_id', $link->provider_id)
-                ->sum('points');
+                ->first();
 
             return [
                 'user' => [
@@ -59,7 +60,7 @@ class VendorPointController extends Controller
                     'points_to_value_ratio' => (float) $link->provider->points_to_value_ratio,
                     'transfer_fee_percent' => (float) $link->provider->transfer_fee_percent,
                 ],
-                'points_balance' => (int) $balance,
+                'points_balance' => $balanceRecord?->balance ?? 0,
             ];
         });
 
