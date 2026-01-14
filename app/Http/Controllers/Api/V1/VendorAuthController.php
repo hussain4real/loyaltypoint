@@ -58,15 +58,24 @@ class VendorAuthController extends Controller
                     'message' => 'The specified provider is not active.',
                 ], 422);
             }
+
             // Use platform email for new/unlinked accounts
             $user = User::where('email', $platformEmail)->first();
+
+            if (! $user) {
+                return response()->json([
+                    'message' => 'No account found with this email address.',
+                ], 404);
+            }
 
             // Check if user has a linked vendor email for this provider
             $vendorLink = VendorUserLink::where('user_id', $user->id)
                 ->where('provider_id', $provider->id)
                 ->first();
 
-            $targetEmail = $vendorLink?->vendor_email ?? $user->email;
+            // For first-time linking, OTP goes to platform email
+            // For linked accounts, OTP goes to vendor email
+            $targetEmail = $vendorLink ? $vendorLink->vendor_email : $platformEmail;
         }
 
         $this->otpService->sendToEmail($user, 'vendor_auth', $targetEmail);
@@ -122,6 +131,26 @@ class VendorAuthController extends Controller
 
             // Use platform email (for new linking or existing users)
             $user = User::where('email', $platformEmail)->first();
+
+            if (! $user) {
+                return response()->json([
+                    'message' => 'No account found with this email address.',
+                ], 404);
+            }
+
+            // Check if user is linked to this provider (unless they're providing vendor_email for new linking)
+            if (! $vendorEmail) {
+                $existingLink = VendorUserLink::where('user_id', $user->id)
+                    ->where('provider_id', $provider->id)
+                    ->first();
+
+                if (! $existingLink) {
+                    return response()->json([
+                        'message' => 'You are not linked to this provider. Please provide vendor_email to link your account.',
+                        'requires_linking' => true,
+                    ], 422);
+                }
+            }
         }
 
         $result = $this->otpService->verify(
@@ -236,12 +265,20 @@ class VendorAuthController extends Controller
             // Use platform email for new/unlinked accounts
             $user = User::where('email', $platformEmail)->first();
 
+            if (! $user) {
+                return response()->json([
+                    'message' => 'No account found with this email address.',
+                ], 404);
+            }
+
             // Check if user has a linked vendor email for this provider
             $existingLink = VendorUserLink::where('user_id', $user->id)
                 ->where('provider_id', $provider->id)
                 ->first();
 
-            $targetEmail = $existingLink?->vendor_email ?? $user->email;
+            // For first-time linking, OTP goes to platform email
+            // For linked accounts, OTP goes to vendor email
+            $targetEmail = $existingLink ? $existingLink->vendor_email : $platformEmail;
         }
 
         $this->otpService->sendToEmail($user, 'vendor_auth', $targetEmail);
