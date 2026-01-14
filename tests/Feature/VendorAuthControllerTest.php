@@ -13,13 +13,13 @@ uses(RefreshDatabase::class);
 
 describe('VendorAuthController', function (): void {
     describe('POST /v1/vendor/auth/request-otp', function (): void {
-        it('sends OTP to valid user email with provider when linked', function (): void {
+        it('sends OTP to vendor_email when user is already linked to provider', function (): void {
             Mail::fake();
 
             $user = User::factory()->create(['email' => 'test@example.com']);
             $provider = Provider::factory()->create(['slug' => 'test-provider']);
 
-            // User must be linked to provider
+            // User is already linked to provider
             VendorUserLink::create([
                 'user_id' => $user->id,
                 'provider_id' => $provider->id,
@@ -36,6 +36,7 @@ describe('VendorAuthController', function (): void {
                 ->assertJsonStructure(['message', 'expires_in_minutes', 'provider'])
                 ->assertJsonPath('provider.slug', 'test-provider');
 
+            // OTP sent to vendor_email for linked users
             Mail::assertSent(OtpMail::class, function ($mail): bool {
                 return $mail->hasTo('vendor@test.com');
             });
@@ -43,23 +44,29 @@ describe('VendorAuthController', function (): void {
             expect(Otp::where('user_id', $user->id)->exists())->toBeTrue();
         });
 
-        it('fails when user is not linked to provider', function (): void {
+        it('sends OTP to platform email for first-time linking (unlinked user)', function (): void {
             Mail::fake();
 
             $user = User::factory()->create(['email' => 'test@example.com']);
             $provider = Provider::factory()->create(['slug' => 'test-provider']);
 
+            // User is NOT linked to provider - first-time linking flow
             $response = $this->postJson('/api/v1/vendor/auth/request-otp', [
                 'email' => 'test@example.com',
                 'vendor_name' => 'Test Vendor App',
                 'provider' => 'test-provider',
             ]);
 
-            $response->assertUnprocessable()
-                ->assertJsonPath('message', 'You are not linked to this provider. Please provide vendor_email to link your account.')
-                ->assertJsonPath('requires_linking', true);
+            $response->assertOk()
+                ->assertJsonStructure(['message', 'expires_in_minutes', 'provider'])
+                ->assertJsonPath('provider.slug', 'test-provider');
 
-            Mail::assertNothingSent();
+            // OTP sent to platform email for first-time users
+            Mail::assertSent(OtpMail::class, function ($mail): bool {
+                return $mail->hasTo('test@example.com');
+            });
+
+            expect(Otp::where('user_id', $user->id)->exists())->toBeTrue();
         });
 
         it('fails with non-existent email', function (): void {
@@ -88,19 +95,13 @@ describe('VendorAuthController', function (): void {
                 ->assertJsonValidationErrors(['provider']);
         });
 
-        it('fails with inactive provider when linked', function (): void {
+        it('fails with inactive provider', function (): void {
             Mail::fake();
 
             $user = User::factory()->create();
             $provider = Provider::factory()->inactive()->create();
 
-            // User must be linked to provider for this test
-            VendorUserLink::create([
-                'user_id' => $user->id,
-                'provider_id' => $provider->id,
-                'vendor_email' => 'vendor@test.com',
-            ]);
-
+            // No link needed - inactive provider check happens before link check
             $response = $this->postJson('/api/v1/vendor/auth/request-otp', [
                 'email' => $user->email,
                 'vendor_name' => 'Test Vendor App',
@@ -213,7 +214,7 @@ describe('VendorAuthController', function (): void {
             });
         });
 
-        it('fails when using platform email and no vendor link exists', function (): void {
+        it('sends OTP to platform email when using platform email and no vendor link exists (first-time linking)', function (): void {
             Mail::fake();
 
             $user = User::factory()->create(['email' => 'platform@example.com']);
@@ -225,10 +226,12 @@ describe('VendorAuthController', function (): void {
                 'provider' => 'test-provider',
             ]);
 
-            $response->assertUnprocessable()
-                ->assertJsonPath('requires_linking', true);
+            $response->assertOk();
 
-            Mail::assertNothingSent();
+            // First-time linking sends to platform email
+            Mail::assertSent(OtpMail::class, function ($mail): bool {
+                return $mail->hasTo('platform@example.com');
+            });
         });
 
         it('sends OTP to correct vendor_email per provider', function (): void {
@@ -796,10 +799,10 @@ describe('VendorAuthController', function (): void {
             });
         });
 
-        it('fails resend when user is not linked to provider', function (): void {
+        it('resends OTP to platform email when user is not linked to provider (first-time linking)', function (): void {
             Mail::fake();
 
-            $user = User::factory()->create();
+            $user = User::factory()->create(['email' => 'first-timer@example.com']);
             $provider = Provider::factory()->create();
 
             $response = $this->postJson('/api/v1/vendor/auth/resend-otp', [
@@ -808,10 +811,12 @@ describe('VendorAuthController', function (): void {
                 'provider' => $provider->slug,
             ]);
 
-            $response->assertUnprocessable()
-                ->assertJsonPath('requires_linking', true);
+            $response->assertOk();
 
-            Mail::assertNothingSent();
+            // First-time linking sends to platform email
+            Mail::assertSent(OtpMail::class, function ($mail): bool {
+                return $mail->hasTo('first-timer@example.com');
+            });
         });
 
         it('invalidates old OTP when resending for linked user', function (): void {
@@ -848,18 +853,13 @@ describe('VendorAuthController', function (): void {
                 ->and($newOtp->isValid())->toBeTrue();
         });
 
-        it('fails resend with inactive provider when linked', function (): void {
+        it('fails resend with inactive provider', function (): void {
             Mail::fake();
 
             $user = User::factory()->create();
             $provider = Provider::factory()->inactive()->create();
 
-            VendorUserLink::create([
-                'user_id' => $user->id,
-                'provider_id' => $provider->id,
-                'vendor_email' => 'vendor@test.com',
-            ]);
-
+            // No link needed - inactive provider check happens first
             $response = $this->postJson('/api/v1/vendor/auth/resend-otp', [
                 'email' => $user->email,
                 'vendor_name' => 'Test Vendor App',
