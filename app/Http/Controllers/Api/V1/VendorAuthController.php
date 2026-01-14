@@ -73,15 +73,9 @@ class VendorAuthController extends Controller
                 ->where('provider_id', $provider->id)
                 ->first();
 
-            // If user is not linked to this provider, they must provide vendor_email to link
-            if (! $vendorLink) {
-                return response()->json([
-                    'message' => 'You are not linked to this provider. Please provide vendor_email to link your account.',
-                    'requires_linking' => true,
-                ], 422);
-            }
-
-            $targetEmail = $vendorLink->vendor_email;
+            // For first-time linking, OTP goes to platform email
+            // For linked accounts, OTP goes to vendor email
+            $targetEmail = $vendorLink ? $vendorLink->vendor_email : $platformEmail;
         }
 
         $this->otpService->sendToEmail($user, 'vendor_auth', $targetEmail);
@@ -282,15 +276,9 @@ class VendorAuthController extends Controller
                 ->where('provider_id', $provider->id)
                 ->first();
 
-            // If user is not linked to this provider, they must provide vendor_email to link
-            if (! $existingLink) {
-                return response()->json([
-                    'message' => 'You are not linked to this provider. Please provide vendor_email to link your account.',
-                    'requires_linking' => true,
-                ], 422);
-            }
-
-            $targetEmail = $existingLink->vendor_email;
+            // For first-time linking, OTP goes to platform email
+            // For linked accounts, OTP goes to vendor email
+            $targetEmail = $existingLink ? $existingLink->vendor_email : $platformEmail;
         }
 
         $this->otpService->sendToEmail($user, 'vendor_auth', $targetEmail);
