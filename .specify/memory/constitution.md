@@ -15,7 +15,7 @@ Sync Impact Report:
 ## Core Principles
 
 ### I. Modern Laravel Standards
-All code MUST adhere to Laravel 12 best practices. This includes strict typing, constructor property promotion, and the use of Enum classes. Raw database queries are forbidden; Eloquent MUST be used for all data interactions. Code style is enforced via Laravel Pint.
+All code MUST adhere to Laravel 13 best practices. This includes strict typing, constructor property promotion, and the use of Enum classes. Raw database queries are forbidden; Eloquent MUST be used for all data interactions. Code style is enforced via Laravel Pint.
 
 ### II. Comprehensive Testing (Pest)
 All features MUST be tested using Pest v4. Feature tests are preferred over Unit tests to ensure end-to-end functionality. Tests MUST cover happy paths, failure scenarios, and edge cases. `RefreshDatabase` and Model Factories MUST be used to ensure test isolation.
@@ -31,7 +31,7 @@ The application MUST follow the standard Laravel directory structure. Form Reque
 
 ## Technology Stack & Standards
 
-- **Backend**: PHP 8.3+, Laravel 12
+- **Backend**: PHP 8.5+, Laravel 13
 - **Frontend**: Blade, Tailwind CSS v4, Vite
 - **Testing**: Pest v4
 - **Code Style**: Laravel Pint
@@ -48,4 +48,4 @@ The application MUST follow the standard Laravel directory structure. Form Reque
 
 This Constitution supersedes all other project documentation. Amendments require a Pull Request with a clear rationale and must be approved by the project maintainers. All Pull Requests must verify compliance with these principles.
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-19 | **Last Amended**: 2025-12-19
+**Version**: 1.1.0 | **Ratified**: 2025-12-19 | **Last Amended**: 2026-10-05

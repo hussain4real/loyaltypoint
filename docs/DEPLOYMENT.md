@@ -7,6 +7,7 @@ This guide walks you through deploying the Loyalty Point API to Google Cloud Run
 1. **Google Cloud Account** with billing enabled
 2. **Google Cloud Project** created
 3. **macOS** (these instructions are for macOS)
+4. **PHP 8.5+** for local development and production (the Docker image uses PHP 8.5)
 
 ## Step 1: Install Google Cloud CLI
 
