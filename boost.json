@@ -1,11 +1,19 @@
 {
     "agents": [
         "copilot",
-        "gemini"
+        "codex",
+        "claude_code",
+        "antigravity"
     ],
-    "editors": [
-        "gemini",
-        "vscode"
-    ],
-    "guidelines": []
+    "cloud": false,
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch": false,
+    "sail": false,
+    "skills": [
+        "infer-conventions",
+        "laravel-best-practices",
+        "testing-best-practices",
+        "tailwindcss-development"
+    ]
 }
