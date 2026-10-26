@@ -236,6 +236,10 @@ On 26 October 2026, the user confirmed that verification providers and the appro
 
 The [V2 OpenAPI contract](pull2spend-v2.openapi.yaml), version 0.2.0, distinguishes implemented identity routes, local fixture routes, unavailable provider capture and planned later-phase operations. Backend consumer identity admission is disabled by default. New V2 credentials cannot bypass session controls through V1 or the legacy `/api/user` route. Ordinary legacy credentials retain their existing scope.
 
+Implementation review is tracked in [backend PR 31](https://github.com/hussain4real/loyaltypoint/pull/31), targeting `dev`, and [mobile draft PR 15](https://github.com/Wafaa-app/wafaa/pull/15), targeting the mobile repository's existing `feature/dev` branch. On 26 October 2026, backend revision `cbcdd3f` passed all four CI checks: the MySQL suite passed 673 tests / 2,446 assertions, followed by six concurrent-worker tests / 53 assertions. An initial MySQL migration failure was corrected by shortening four generated constraint names and adding a SQL-compilation regression; it was not treated as a passing run.
+
+The mobile change preserves development baseline `67a699b`, its dependencies, native application IDs and legacy composition. All 29 added identity tests pass and their strict analysis is clean. The complete suite has the same 51 failures as the unchanged baseline (734 baseline passes; 763 with identity), and both full analyzers report the same 434 findings. These existing compatibility failures remain visible in CI and keep the mobile PR in draft. Native builds and physical-device verification are separate gates; none of these results closes Phase 2 or constitutes deployment evidence.
+
 Compliance reviewers use this procedure for the implemented workflow:
 
 1. Sign in to the back office with current MFA and open `/backoffice/identity/reviews`. Only the scoped Compliance role has identity review, evidence and restriction permissions.
