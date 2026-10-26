@@ -618,4 +618,4 @@ Record phase review using these fields:
 
 Review scope changes with product, finance, compliance or issuer/partner owners as affected. Keep business decisions distinct from technical verification and production authorization. This plan remains the task baseline until its version is updated.
 
-The v0.1 plan was recovered from the available original source record and user-supplied text. Phase structure, task and acceptance IDs, dependency gates and completion statuses are preserved. No application implementation or deployment is recorded by this revision.
+The original v0.1 plan was recovered from the available source record and user-supplied text. At recovery, its phase structure, task and acceptance IDs, dependency gates and completion statuses were preserved. Recovering the document did not implement or deploy application features. Later engineering evidence and phase outcomes are recorded above.
