@@ -35,13 +35,13 @@ return new class extends Migration
             $table->dateTime('manual_decided_at')->nullable();
             $table->string('provider_observed_at', 35)->nullable();
             $table->timestamps();
-            $table->unique(['consumer_identity_id', 'revision']);
+            $table->unique(['consumer_identity_id', 'revision'], 'consumer_verification_identity_revision_unique');
             $table->index(['customer_id', 'state']);
         });
         Schema::create('consumer_verification_receipts', function (Blueprint $table): void {
             $table->id();
             $table->uuid('reference')->unique();
-            $table->foreignId('consumer_verification_revision_id')->constrained()->restrictOnDelete();
+            $table->foreignId('consumer_verification_revision_id')->constrained(indexName: 'consumer_receipts_revision_fk')->restrictOnDelete();
             $table->string('source', 64);
             $table->string('event_reference', 180);
             $table->string('identity_hash', 64)->unique();
@@ -53,7 +53,7 @@ return new class extends Migration
         Schema::create('consumer_review_decisions', function (Blueprint $table): void {
             $table->id();
             $table->uuid('reference')->unique();
-            $table->foreignId('consumer_verification_revision_id')->constrained()->restrictOnDelete();
+            $table->foreignId('consumer_verification_revision_id')->constrained(indexName: 'consumer_reviews_revision_fk')->restrictOnDelete();
             $table->foreignId('actor_id')->constrained('users')->restrictOnDelete();
             $table->string('decision', 40);
             $table->string('reason', 100);
@@ -65,7 +65,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('reference')->unique();
             $table->foreignId('consumer_identity_id')->constrained()->restrictOnDelete();
-            $table->foreignId('consumer_verification_revision_id')->constrained()->restrictOnDelete();
+            $table->foreignId('consumer_verification_revision_id')->constrained(indexName: 'consumer_enrollment_revision_fk')->restrictOnDelete();
             $table->string('purpose', 40);
             $table->string('policy_reference', 180);
             $table->text('payload');
