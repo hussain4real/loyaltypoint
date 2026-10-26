@@ -2,12 +2,12 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.2 |
+| Version | 0.3 |
 | Date | 26 October 2026 |
-| Status | Engineering checks passed. Operating evidence and accountable acceptance pending |
+| Status | Engineering delivery verified. Accountable phase acceptance pending. Hosting deferred |
 | Scope | P01-T01 through P01-T09 and P01-A01 through P01-A04 |
-| Functional baseline | [Pull2Spend FDD](PULL2SPEND_FDD.md), version 0.2 |
-| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.2 |
+| Functional baseline | [Pull2Spend FDD](PULL2SPEND_FDD.md), version 0.3 |
+| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.3 |
 | Business source | [Original Pull2Spend BRD](Pull2Spend_BRD_2.docx), unchanged |
 
 ## 1. Delivery boundary and evidence
@@ -19,6 +19,8 @@ No Phase 1 operation credits a monetary wallet, debits a real partner account, i
 The point owner supplies points quantity and equivalent monetary value. Pull2Spend records that value, currency, references, and validity where supplied. Later fee and incentive calculations use the supplied amount. Pull2Spend does not calculate or configure the partner's point-to-money rules, and this design introduces no FX behavior.
 
 The BRS review supplied on 26 October 2026 permits the FDD to progress with this valuation clarification. It does not approve outstanding licensing, funding, issuer, commercial, or operating decisions.
+
+On 26 October 2026, the user directed that hosting be left out because a different hosting destination will be selected later. The Phase 1 engineering scope includes local/CI validation, provider-neutral configuration contracts, encrypted data handling, diagnostics and operational design. H-01 carries hosted infrastructure, managed-secret integration, deployed alerts, restore evidence and operational activation. Hosting is no longer a Phase 1 blocker. Accountable phase acceptance remains a separate review outcome.
 
 ### 1.1 Recorded prerequisite evidence
 
@@ -368,15 +370,15 @@ Recovery ignores new-admission flags. A disabled new capability therefore does n
 
 ## 9. Environment isolation and production resilience
 
-### 9.1 Committed controls and missing operating evidence
+### 9.1 Current controls and deferred hosting evidence
 
 The new development and staging example environment files contain placeholders, distinct namespaces, protected sessions, private database names, durable queue settings, and disabled new adapters. The pre-existing production template and cloud resources retain their names. They contain no usable managed-store credentials or real cloud resource identity.
 
 `FoundationEnvironment::problems()` returns safe diagnostic codes for missing namespace, unsafe timeout order, debug exposure, simulator admission outside `local` or `testing`, unprotected sessions, missing secret-store, backup or alert-owner references, unnamespaced cache, cookie or default queue, unsupported nondurable queue use outside local tests, invalid attempt/backoff settings, and unsafe callback limits. Only the database queue is currently supported outside local tests. These checks validate configuration shape. They cannot prove that two configured databases, storage locations, or secrets are actually separate.
 
-The required environment evidence is:
+The following evidence belongs to H-01 after hosting is selected:
 
-| Control | Required evidence before P01-T08 closure |
+| Control | Required evidence before hosted use under H-01 |
 | --- | --- |
 | Database isolation | Development and staging resource IDs, endpoints, separate principals, network policy, and a test proving one principal cannot read the other environment |
 | Storage isolation | Distinct private bucket or root, encryption, access policy, and denied cross-environment read evidence |
@@ -386,7 +388,7 @@ The required environment evidence is:
 | Monitoring | Named operations owner, approved destination, safe diagnostic output, alert delivery test, and escalation record |
 | Backups | Encrypted backup policy, retention, restore evidence, key recovery authority, and environment-specific access |
 
-Actual host, database, secret-store, alert-destination, and operator approvals are not present in the repository baseline. This task remains partial until those records exist. This document does not authorize new cloud resources, rename existing infrastructure, or deploy the application.
+The hosting destination is deferred by the user. Actual host, database, managed-store, alert-destination and operator records are required for H-01 before hosted use. Their absence does not block the current Phase 1 engineering scope. The existing templates and guards remain available for that later work.
 
 ### 9.2 Monitoring contract
 
@@ -446,7 +448,7 @@ Canonical checks for a final commit are `composer validate --strict`, `composer 
 | OD-13 membership uniqueness | Product, partners, and engineering | Pending. Future connection constraints require a recorded decision |
 | OD-15 case SLAs, privileged actions, and approval thresholds | Operations, finance, and compliance | Pending. A 24-hour case setting and staff session lifetimes are provisional engineering defaults |
 | OD-16 retention, residency, recovery, and service targets | Compliance, operations, and engineering | Pending. Managed-resource, backup, restore, and review evidence required |
-| Development and staging resources and operating owners | Engineering, security, and operations | Resource and managed-store evidence missing. P01-T08 cannot close on templates |
+| H-01 hosting readiness | Engineering, security, and operations after target selection | Deferred by user instruction. Required before hosted use. No cloud project selected or approved |
 
 ### 11.1 Task completion matrix
 
@@ -459,8 +461,10 @@ Canonical checks for a final commit are `composer validate --strict`, `composer 
 | P01-T05 | Staff shell, MFA, roles, scopes, and elevation, section 7 | Implemented. CI passed | Access reviewer and bootstrap authority |
 | P01-T06 | Append-only audit, masked views, cases, and SLA state, sections 4 and 7 | Implemented. SQLite and MySQL CI passed | Accountable review of metadata and the provisional SLA |
 | P01-T07 | Durable inbox, independent delivery, claims, and recovery, section 8 | Implemented. Failure and concurrency checks passed | Accountable operational review |
-| P01-T08 | Environment templates, diagnostics, monitoring contract, resilience and restore design, section 9 | Partial, external evidence required | Actual isolated resources, managed secrets, monitoring owner, and accountable operational review |
+| P01-T08 | Provider-neutral templates, encrypted data handling, local/CI isolation, diagnostics, monitoring and resilience/restore design, section 9 | Engineering scope verified | Accountable phase review. Hosted resources and managed-store integration belong to H-01 |
 | P01-T09 | CI, typed simulators, fixtures, and failure and concurrency conventions, section 10 | Engineering verified | Accountable phase review |
+
+Engineering owner for P01-T01 through P01-T09: Codex in this repository task. Independent engineering review was provided by the Codex access, event/contract and audit/case reviewers, with PR feedback resolved in code. The engineering completion date is 26 October 2026. Evidence is recorded in section 12 and PR #28. These records assign no production operating role and grant no legal or compliance approval.
 
 ### 11.2 Acceptance review
 
@@ -481,16 +485,15 @@ Independent implementation review covered the staff module, supplied-value contr
 
 The 26 existing application method/path/action mappings were retained. The original BRD SHA-256 remains `c012a8c7e6fc409b28cba39a56051f7920bc5e003d45493e63832cb1b570acec`.
 
-P01-T08 and phase acceptance remain open for the named external records in section 9. The main phased plan checkboxes remain unchecked pending recorded accountable review; no implementation task is marked complete on the strength of documentation alone.
+The revised plan checks Phase 1 engineering tasks and acceptance scenarios against the implemented code, reviews and CI. Phase acceptance remains in review. Hosting records in section 9 belong to the user-deferred H-01 gate. Other implementation phases remain unchecked.
 
 ### 12.1 CI correction history and environment discovery
 
 The initial [Phase 1 CI run 40287759095](https://github.com/hussain4real/loyaltypoint/actions/runs/40287759095) passed PHP/SQLite, frontend and API-contract checks. MySQL reported one test-fixture failure: the year-2603 RFC 6238 vector attempted to create legacy user TIMESTAMP fields outside MySQL's range. The native algorithm is now isolated in `StaffTotp`; all six RFC vectors remain covered without future-dated database records, while real session, replay and persistence checks remain in the feature suite. The corrected code head `8c112fd82097af677846d10950cb7d83fdd2fc5f` passed a separate MySQL run. The initial failure remains part of the record.
 
-Repository environment metadata returned no configured GitHub environments. A read-only Cloud Run inventory request against the legacy project named in repository deployment documentation was denied or the project could not be found. The current CLI default belongs to another project and was left unchanged. This supplies no evidence of Pull2Spend development/staging isolation. A confirmed target project, appropriate access, managed-store references and operating reviewers are still required.
+Repository environment metadata returned no configured GitHub environments. A read-only Cloud Run inventory request against the legacy project named in repository deployment documentation was denied or the project could not be found. The current CLI default belongs to another project and was left unchanged. This supplies no evidence of Pull2Spend development/staging isolation. That discovery record is historical. The subsequent user instruction defers hosting to H-01, where the selected destination and operating access will be recorded.
 
 PR review also identified two workflow gaps. An expired password challenge now returns to sign-in instead of cycling through MFA. A resolved case may be reassigned to a newly eligible owner when its former owner loses access; current resolution fields reset while immutable evidence history remains. Both paths have regression coverage. These corrections are included in the subsequent reviewed head rather than hidden by rerunning the original failed head.
-
 
 ### 12.2 Verified code baseline and remaining operating evidence
 
@@ -508,7 +511,7 @@ Independent review of that code commit found no blocking findings. Both PR revie
 
 The current cloud account can see an active Firebase-labelled project named `wafaa`, with ID `wafaa-68098`. Cloud Run is disabled in that project. No repository configuration identifies that project as the approved Pull2Spend target. No API was enabled and no resource was created or renamed during discovery.
 
-The user has confirmed that they will provide the approved project and reviewers. Environment setup remains pending that information, the managed-secret destination and required access. P01-T08 and the full Phase 1 acceptance remain open.
+The user subsequently directed that hosting be left out of the current phase. The historical project discovery does not select a target. H-01 will record the later hosting destination, access, secret-store integration and operating owners. The current Phase 1 engineering scope is verified. Accountable phase acceptance remains pending independently of hosting.
 
 ### 12.3 Revision history
 
@@ -516,3 +519,4 @@ The user has confirmed that they will provide the approved project and reviewers
 | --- | --- | --- |
 | 0.1 | 26 October 2026 | Added the logical model, contracts, operational design and initial engineering evidence |
 | 0.2 | 26 October 2026 | Recorded the green corrected code baseline, resolved review findings and the pending user-supplied environment decision |
+| 0.3 | 26 October 2026 | Apply the user-directed hosting deferral. Verify revised P01-T08 repository deliverables and move hosted environment, managed-secret and activation evidence to H-01. Keep phase acceptance distinct from engineering verification |

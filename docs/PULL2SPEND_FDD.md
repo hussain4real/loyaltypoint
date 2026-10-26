@@ -2,13 +2,13 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.2 |
+| Version | 0.3 |
 | Date | 26 October 2026 |
 | Status | Accepted to progress by BRS reviewer with valuation clarification; unresolved decisions remain under review |
 | Business owner | Bankole, as named in the source BRD |
 | Source | [Pull2Spend_BRD_2.docx](Pull2Spend_BRD_2.docx), Draft v1.0, 11 August 2026 |
 | Business review copy | [FDD PDF](PULL2SPEND_FDD.pdf) |
-| Delivery plan | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.2; [plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
+| Delivery plan | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.3; [plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
 | Classification | Confidential - Personal Project, inherited from the BRD |
 | Existing application | Wafaa, implemented in the `loyaltypoint` repository |
 | Target business process | Multi-loyalty aggregation → points redemption → monetary wallet → virtual card spend |
@@ -46,6 +46,8 @@ Pull2Spend is the confirmed product name, as supplied on 26 October 2026 and use
 Business facts and requirement IDs come from the attachment. The current-state comparison comes from repository documentation and source inspection. Proposed design choices and unresolved assumptions are labeled explicitly. Instructions and approval language inside the attachment are treated as document content; they do not replace the user's request to create and save this FDD.
 
 The BRD contains some incorrect section cross-references: revenue sharing is in section 7.6, back office in 7.8, and compliance/retention in section 9. This FDD follows the named subject and requirement ID rather than the incorrect cross-reference.
+
+The user deferred hosting on 26 October 2026 because the application will be hosted elsewhere later. Current Phase 1 delivery covers repository implementation, local and CI validation, configuration contracts, and operational design. Hosting selection, hosted environment provisioning, managed-secret integration, deployed monitoring and operational activation are outside the current phase. They remain required before hosted external integration or production use. This changes delivery timing, not the security, accounting or service requirements in this FDD.
 
 ## 2. Current process and required change
 
@@ -542,5 +544,6 @@ This draft is saved for review with the unchanged source BRD. Subsequent impleme
 | --- | --- | --- |
 | 0.1 | 5 October 2026 | Initial FDD based on the unchanged Pull2Spend BRD; provisional product naming and platform point-conversion assumption. |
 | 0.2 | 26 October 2026 | Confirm Pull2Spend branding, resolve OD-01 and record the BRS reviewer's acceptance to progress with the valuation clarification. Replace platform point conversion with partner-supplied quantity/value across flows, contracts, entities, screens and acceptance criteria. Preserve fee models, approval controls, accounting and unresolved decisions. |
+| 0.3 | 26 October 2026 | Record the user-directed hosting deferral. Keep provider-specific provisioning and operational activation outside current Phase 1 delivery while preserving later hosting-readiness, security and financial approval gates. |
 
-The complete FDD content was recovered from the original v0.1 PDF supplied in Downloads, using the available original Markdown for sections 1-8 and PDF text/table extraction for sections 9-21. Formatting was reconstructed; section, acceptance and decision IDs were preserved. The original BRD is copied unchanged. This revision is documentation only and records no implementation, test execution, deployment or financial-service authorization.
+The complete FDD content was recovered from the original v0.1 PDF supplied in Downloads, using the available original Markdown for sections 1-8 and PDF text/table extraction for sections 9-21. Formatting was reconstructed; section, acceptance and decision IDs were preserved. The original BRD is copied unchanged. This FDD remains a design record. Phase 1 implementation and test evidence are recorded separately in the foundations document and implementation plan. No deployment or financial-service authorization is implied.
