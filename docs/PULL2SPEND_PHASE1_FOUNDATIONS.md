@@ -2,12 +2,13 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.3 |
+| Version | 0.4 |
 | Date | 26 October 2026 |
 | Status | Engineering delivery verified. Accountable phase acceptance pending. Hosting deferred |
+| Accountable security/operations reviewer | Erastus, designated by the user on 26 October 2026. Review outcome pending |
 | Scope | P01-T01 through P01-T09 and P01-A01 through P01-A04 |
 | Functional baseline | [Pull2Spend FDD](PULL2SPEND_FDD.md), version 0.3 |
-| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.3 |
+| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.4 |
 | Business source | [Original Pull2Spend BRD](Pull2Spend_BRD_2.docx), unchanged |
 
 ## 1. Delivery boundary and evidence
@@ -466,6 +467,8 @@ Canonical checks for a final commit are `composer validate --strict`, `composer 
 
 Engineering owner for P01-T01 through P01-T09: Codex in this repository task. Independent engineering review was provided by the Codex access, event/contract and audit/case reviewers, with PR feedback resolved in code. The engineering completion date is 26 October 2026. Evidence is recorded in section 12 and PR #28. These records assign no production operating role and grant no legal or compliance approval.
 
+On 26 October 2026, the user designated Erastus as the accountable Phase 1 security/operations reviewer. Erastus's review covers the current deliverables and P01-A01 through P01-A04, with hosting excluded under H-01. The assignment establishes review ownership. Acceptance still requires Erastus's recorded outcome, evidence reference and decision date. No review outcome has been supplied.
+
 ### 11.2 Acceptance review
 
 | Criterion | Evidence to inspect | Status |
@@ -507,7 +510,7 @@ Code commit [`8c112fd`](https://github.com/hussain4real/loyaltypoint/commit/8c11
 | Frontend build | Passed |
 | OpenAPI 3.1 contracts | Passed |
 
-Independent review of that code commit found no blocking findings. Both PR review threads are resolved. [PR #28](https://github.com/hussain4real/loyaltypoint/pull/28) targets `dev` and remains open. These results prove the tested engineering behavior. They do not establish environment isolation or operating acceptance.
+Independent review of that code commit found no blocking findings. Both PR review threads are resolved. [PR #28](https://github.com/hussain4real/loyaltypoint/pull/28) merged into `dev` on 26 October 2026 as `d25c9ee08f012e43e41987a52b4124befbd1300a`. All four jobs passed in [post-merge CI run 40293078614](https://github.com/hussain4real/loyaltypoint/actions/runs/40293078614), including the full SQLite/MySQL suite and separate MySQL concurrent-worker check. These results prove the tested engineering behavior. They do not establish hosted environment isolation or operating acceptance.
 
 The current cloud account can see an active Firebase-labelled project named `wafaa`, with ID `wafaa-68098`. Cloud Run is disabled in that project. No repository configuration identifies that project as the approved Pull2Spend target. No API was enabled and no resource was created or renamed during discovery.
 
@@ -520,3 +523,4 @@ The user subsequently directed that hosting be left out of the current phase. Th
 | 0.1 | 26 October 2026 | Added the logical model, contracts, operational design and initial engineering evidence |
 | 0.2 | 26 October 2026 | Recorded the green corrected code baseline, resolved review findings and the pending user-supplied environment decision |
 | 0.3 | 26 October 2026 | Apply the user-directed hosting deferral. Verify revised P01-T08 repository deliverables and move hosted environment, managed-secret and activation evidence to H-01. Keep phase acceptance distinct from engineering verification |
+| 0.4 | 26 October 2026 | Record Erastus's user-designated security/operations review ownership and the merge into dev with passing post-merge CI. Preserve the pending review outcome and hosting deferral |
