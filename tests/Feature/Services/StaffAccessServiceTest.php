@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\AuditService;
 use App\Services\StaffAccessService;
 use App\Services\StaffMfaService;
+use App\Services\StaffTotp;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -142,16 +143,19 @@ it('preserves encrypted MFA data and excludes it from model serialization', func
     expect($staff->toArray())->not->toHaveKeys(['mfa_secret', 'last_totp_counter', 'enrollment_token_hash', 'session_binding']);
 });
 
-it('verifies the RFC6238 SHA1 vectors with six digit truncation', function (int $timestamp, string $code): void {
-    $this->travelTo(CarbonImmutable::createFromTimestampUTC($timestamp));
-    $staff = StaffMembership::factory()->enrolled()->create();
-    $session = app('session.store');
-    $session->start();
-    $session->put('staff_password_user', $staff->user_id);
-    $session->put('staff_password_at', now()->timestamp);
-    app(StaffMfaService::class)->verify($staff->user, $code, $session);
-    expect($session->get('staff_mfa_user'))->toBe($staff->user_id);
-})->with([[59, '287082'], [1111111109, '081804'], [1111111111, '050471'], [1234567890, '005924'], [2000000000, '279037'], [20000000000, '353130']]);
+it('verifies the RFC6238 SHA1 vectors with six digit truncation without database timestamp limits', function (int $timestamp, string $code, int $counter): void {
+    $at = new DateTimeImmutable('@'.$timestamp);
+    $totp = new StaffTotp;
+
+    expect($totp->matchingCounter('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', $code, $at))->toBe($counter);
+})->with([
+    [59, '287082', 1],
+    [1111111109, '081804', 37037036],
+    [1111111111, '050471', 37037037],
+    [1234567890, '005924', 41152263],
+    [2000000000, '279037', 66666666],
+    [20000000000, '353130', 666666666],
+]);
 
 it('rejects replayed authenticator codes and stale password sessions', function (): void {
     $this->travelTo(CarbonImmutable::createFromTimestampUTC(2000000000));

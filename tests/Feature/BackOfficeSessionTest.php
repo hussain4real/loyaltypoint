@@ -223,3 +223,20 @@ it('requires CSRF verification on staff forms outside the testing bypass', funct
     $this->post('/backoffice/login', ['email' => 'staff@example.test', 'password' => 'test-only-password'])->assertStatus(419);
     $this->assertDatabaseCount('audit_events', 0);
 });
+
+it('reaches password sign in within a bounded redirect chain after challenge credentials expire', function (int $seconds, string $entry): void {
+    $this->travelTo(CarbonImmutable::createFromTimestampUTC(2000000000));
+    signInBackOffice($this);
+    $this->travel($seconds)->seconds();
+
+    $response = $this->get($entry);
+    for ($redirects = 0; $redirects < 3 && $response->isRedirect(); $redirects++) {
+        $response = $this->get($response->headers->get('Location'));
+    }
+
+    $response->assertOk()->assertViewIs('backoffice.login')->assertSee('Staff sign in');
+    $response->assertSessionMissing('staff_password_at');
+})->with([
+    'password challenge expired while MFA remains current' => [601, '/backoffice/mfa'],
+    'password and MFA both expired' => [1801, '/backoffice'],
+]);

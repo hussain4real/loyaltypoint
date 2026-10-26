@@ -24,7 +24,7 @@ class CaseService
         'assigned' => ['assigned', 'in_progress', 'awaiting_external'],
         'in_progress' => ['assigned', 'awaiting_external', 'resolved'],
         'awaiting_external' => ['assigned', 'in_progress', 'resolved'],
-        'resolved' => ['in_progress', 'closed'],
+        'resolved' => ['assigned', 'in_progress', 'closed'],
         'closed' => [],
     ];
 

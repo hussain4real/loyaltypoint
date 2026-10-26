@@ -475,10 +475,20 @@ Phase 1 closes only when its deliverables exist, its acceptance criteria pass, r
 
 ## 12. Engineering verification record
 
-The local repository implementation passed 504 tests with 1,624 assertions, including the retained 269-test prerequisite baseline. It also passed Pint, strict Composer validation, PHP platform checks, the frontend build, workflow lint, and OpenAPI 3.1 validation. The final CI and commit references are recorded in the implementation PR; this local record does not replace them.
+The local repository implementation passed 521 tests with 1,677 assertions, including the retained 269-test prerequisite baseline. It also passed Pint, strict Composer validation, PHP platform checks, the frontend build, workflow lint, and OpenAPI 3.1 validation. The final CI and commit references are recorded in the implementation PR; this local record does not replace them.
 
 Independent implementation review covered the staff module, supplied-value contracts and durable pipeline. Review identified and corrected configured queue-name bypass, case-insensitive opaque-ID collisions, zero-value readiness, snapshot metadata retention, safe case-form errors, input flashing and staff lookup denials. These are engineering reviews by Codex agents, not accountable business/security/operations acceptance.
 
 The 26 existing application method/path/action mappings were retained. The original BRD SHA-256 remains `c012a8c7e6fc409b28cba39a56051f7920bc5e003d45493e63832cb1b570acec`.
 
 P01-T08 and phase acceptance remain open for the named external records in section 9. The main phased plan checkboxes remain unchecked pending recorded accountable review; no implementation task is marked complete on the strength of documentation alone.
+
+
+### 12.1 CI correction history and environment discovery
+
+The initial [Phase 1 CI run 40287759095](https://github.com/hussain4real/loyaltypoint/actions/runs/40287759095) passed PHP/SQLite, frontend and API-contract checks. MySQL reported one test-fixture failure: the year-2603 RFC 6238 vector attempted to create legacy user TIMESTAMP fields outside MySQL's range. The native algorithm is now isolated in `StaffTotp`; all six RFC vectors remain covered without future-dated database records, while real session, replay and persistence checks remain in the feature suite. The corrected head requires a fresh MySQL run; the initial failure is not relabelled as a pass.
+
+Repository environment metadata returned no configured GitHub environments. A read-only Cloud Run inventory request against the legacy project named in repository deployment documentation was denied or the project could not be found. The current CLI default belongs to another project and was left unchanged. This supplies no evidence of Pull2Spend development/staging isolation. A confirmed target project, appropriate access, managed-store references and operating reviewers are still required.
+
+
+PR review also identified two workflow gaps. An expired password challenge now returns to sign-in instead of cycling through MFA. A resolved case may be reassigned to a newly eligible owner when its former owner loses access; current resolution fields reset while immutable evidence history remains. Both paths have regression coverage. These corrections are included in the subsequent reviewed head rather than hidden by rerunning the original failed head.

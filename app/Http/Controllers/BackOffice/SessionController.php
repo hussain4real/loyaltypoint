@@ -60,7 +60,13 @@ class SessionController extends Controller
             return redirect()->route('backoffice.login');
         }
         $staff = StaffMembership::query()->where('user_id', $request->user('web')->id)->where('enabled', true)->firstOrFail();
-        $this->mfa->requirePasswordSession($request->user('web'), $request->session());
+        try {
+            $this->mfa->requirePasswordSession($request->user('web'), $request->session());
+        } catch (ValidationException) {
+            $request->session()->forget(['staff_password_user', 'staff_password_at']);
+
+            return redirect()->route('backoffice.login')->with('status', 'Sign in again before verifying your authenticator.');
+        }
 
         return view('backoffice.mfa', ['enrolled' => $staff->mfa_confirmed_at !== null, 'secret' => null]);
     }

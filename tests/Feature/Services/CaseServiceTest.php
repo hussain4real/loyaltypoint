@@ -150,3 +150,29 @@ test('keeps case-distinct opaque source references separate with stable exact id
     $this->assertDatabaseCount('operational_cases', 2);
     $this->assertDatabaseCount('case_events', 2);
 });
+
+test('reassigns a resolved case after its owner loses eligibility and preserves resolution history', function (array $ownerChange): void {
+    $actor = caseStaffSession();
+    $oldOwner = StaffMembership::factory()->create(['role' => StaffRole::Operations, 'partner_ids' => [7], 'customer_ids' => [9]]);
+    $replacement = StaffMembership::factory()->create(['role' => StaffRole::Operations, 'partner_ids' => [7], 'customer_ids' => [9]]);
+    $service = app(CaseService::class);
+    $case = $service->open('connector', 'incident-owner-change', 7, 9, ownerId: $oldOwner->user_id);
+    $case = $service->transition($actor, $case, 'in_progress', 'review_started');
+    $case = $service->transition($actor, $case, 'resolved', 'partner_confirmed', 'original-evidence');
+    $oldOwner->update($ownerChange);
+    expect(fn () => $service->transition($actor, $case, 'closed', 'resolution_reviewed'))->toThrow(InvalidArgumentException::class);
+
+    $case = $service->transition($actor, $case, 'assigned', 'replacement_owner_assigned', ownerId: $replacement->user_id);
+    expect($case->fresh())->state->toBe('assigned')->owner_id->toBe($replacement->user_id)
+        ->resolution_code->toBeNull()->evidence_reference->toBeNull()->resolved_at->toBeNull();
+    expect($case->events()->where('to_state', 'resolved')->first()->evidence_reference)->toBe('original-evidence');
+    $case = $service->transition($actor, $case, 'in_progress', 'replacement_review_started');
+    $case = $service->transition($actor, $case, 'resolved', 'replacement_confirmed', 'replacement-evidence');
+    $case = $service->transition($actor, $case, 'closed', 'resolution_reviewed');
+
+    expect($case->fresh())->state->toBe('closed')->owner_id->toBe($replacement->user_id)->evidence_reference->toBe('replacement-evidence');
+    expect($case->events()->where('to_state', 'resolved')->orderBy('id')->pluck('evidence_reference')->all())->toBe(['original-evidence', 'replacement-evidence']);
+})->with([
+    'disabled owner' => [['enabled' => false]],
+    'owner moved outside partner scope' => [['partner_ids' => [8]]],
+]);

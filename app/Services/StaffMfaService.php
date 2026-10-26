@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
 
 class StaffMfaService
 {
-    public function __construct(private AuditService $audit) {}
+    public function __construct(private AuditService $audit, private StaffTotp $totp) {}
 
     public function beginEnrollment(User $user, string $token, Session $session): string
     {
@@ -29,7 +29,7 @@ class StaffMfaService
                 || ! hash_equals($staff->enrollment_token_hash, hash('sha256', $token))) {
                 throw ValidationException::withMessages(['token' => 'The enrollment token is invalid.']);
             }
-            $secret = $this->base32Encode(random_bytes(20));
+            $secret = $this->totp->createSecret();
             $staff->mfa_secret = $secret;
             $staff->enrollment_token_hash = null;
             $staff->save();
@@ -56,7 +56,7 @@ class StaffMfaService
                 || ! hash_equals(hash('sha256', $session->getId()), (string) $session->get('staff_enrollment_binding')))) {
                 throw ValidationException::withMessages(['code' => 'Start factor enrollment with your invitation token.']);
             }
-            $counter = $this->matchingCounter($staff->mfa_secret, $code);
+            $counter = $this->totp->matchingCounter($staff->mfa_secret, $code, now()->toDateTimeImmutable());
             if ($counter === null || ($staff->last_totp_counter !== null && $counter <= $staff->last_totp_counter)) {
                 throw ValidationException::withMessages(['code' => 'The authenticator code is invalid or already used.']);
             }
@@ -96,7 +96,7 @@ class StaffMfaService
         return DB::transaction(function () use ($operator, $target, $password, $code): string {
             $reviewer = StaffMembership::query()->where('user_id', $operator->id)->lockForUpdate()->first();
             $current = StaffMembership::query()->whereKey($target->id)->lockForUpdate()->firstOrFail();
-            $counter = $reviewer === null ? null : $this->matchingCounter($reviewer->mfa_secret, $code);
+            $counter = $reviewer === null ? null : $this->totp->matchingCounter($reviewer->mfa_secret, $code, now()->toDateTimeImmutable());
             if ($reviewer === null || ! $reviewer->enabled || $reviewer->mfa_confirmed_at === null
                 || ! in_array($reviewer->role, [StaffRole::Operations, StaffRole::Compliance], true)
                 || $reviewer->partner_ids !== null || $reviewer->customer_ids !== null
@@ -118,66 +118,5 @@ class StaffMfaService
 
             return $token;
         });
-    }
-
-    private function matchingCounter(?string $secret, string $code): ?int
-    {
-        if (! is_string($secret) || ! preg_match('/\A[A-Z2-7]{32}\z/', $secret) || ! preg_match('/\A[0-9]{6}\z/', $code)) {
-            return null;
-        }
-        $key = $this->base32Decode($secret);
-        if (strlen($key) !== 20) {
-            return null;
-        }
-        $current = intdiv(now()->timestamp, 30);
-        foreach ([$current, $current - 1, $current + 1] as $counter) {
-            if ($counter < 0) {
-                continue;
-            }
-            $hash = hash_hmac('sha1', pack('N2', intdiv($counter, 4294967296), $counter % 4294967296), $key, true);
-            $offset = ord($hash[19]) & 15;
-            $value = unpack('N', substr($hash, $offset, 4))[1] & 0x7FFFFFFF;
-            if (hash_equals(str_pad((string) ($value % 1000000), 6, '0', STR_PAD_LEFT), $code)) {
-                return $counter;
-            }
-        }
-
-        return null;
-    }
-
-    private function base32Encode(string $bytes): string
-    {
-        $bits = '';
-        foreach (str_split($bytes) as $byte) {
-            $bits .= str_pad(decbin(ord($byte)), 8, '0', STR_PAD_LEFT);
-        }
-        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-        $result = '';
-        foreach (str_split($bits, 5) as $chunk) {
-            $result .= $alphabet[bindec(str_pad($chunk, 5, '0'))];
-        }
-
-        return $result;
-    }
-
-    private function base32Decode(string $secret): string
-    {
-        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-        $bits = '';
-        foreach (str_split($secret) as $character) {
-            $value = strpos($alphabet, $character);
-            if ($value === false) {
-                return '';
-            }
-            $bits .= str_pad(decbin($value), 5, '0', STR_PAD_LEFT);
-        }
-        $bytes = '';
-        foreach (str_split($bits, 8) as $chunk) {
-            if (strlen($chunk) === 8) {
-                $bytes .= chr(bindec($chunk));
-            }
-        }
-
-        return $bytes;
     }
 }
