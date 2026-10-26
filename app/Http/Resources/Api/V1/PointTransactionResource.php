@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\PointTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\PointTransaction
+ * @mixin PointTransaction
  */
 class PointTransactionResource extends JsonResource
 {

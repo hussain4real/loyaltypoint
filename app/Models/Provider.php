@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\ProviderFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Provider extends Model
 {
-    /** @use HasFactory<\Database\Factories\ProviderFactory> */
+    /** @use HasFactory<ProviderFactory> */
     use HasFactory;
 
     protected $fillable = [

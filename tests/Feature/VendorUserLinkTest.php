@@ -3,6 +3,7 @@
 use App\Models\Provider;
 use App\Models\User;
 use App\Models\VendorUserLink;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -94,7 +95,7 @@ describe('VendorUserLink Model', function (): void {
             'user_id' => $bob->id,
             'provider_id' => $provider->id,
             'vendor_email' => 'ali@vendor.com',
-        ]))->toThrow(\Illuminate\Database\QueryException::class);
+        ]))->toThrow(QueryException::class);
     });
 
     it('can find links by vendor email', function (): void {
