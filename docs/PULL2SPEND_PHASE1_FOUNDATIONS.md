@@ -2,13 +2,13 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.4 |
+| Version | 0.5 |
 | Date | 26 October 2026 |
-| Status | Engineering delivery verified. Accountable phase acceptance pending. Hosting deferred |
-| Accountable security/operations reviewer | Erastus, designated by the user on 26 October 2026. Review outcome pending |
+| Status | Phase 1 complete. Erastus's acceptance reported by the user. Hosting deferred |
+| Accountable security/operations reviewer | Erastus, designated by the user on 26 October 2026. Outcome: accepted, as reported by the user that day |
 | Scope | P01-T01 through P01-T09 and P01-A01 through P01-A04 |
 | Functional baseline | [Pull2Spend FDD](PULL2SPEND_FDD.md), version 0.3 |
-| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.4 |
+| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.5 |
 | Business source | [Original Pull2Spend BRD](Pull2Spend_BRD_2.docx), unchanged |
 
 ## 1. Delivery boundary and evidence
@@ -21,7 +21,7 @@ The point owner supplies points quantity and equivalent monetary value. Pull2Spe
 
 The BRS review supplied on 26 October 2026 permits the FDD to progress with this valuation clarification. It does not approve outstanding licensing, funding, issuer, commercial, or operating decisions.
 
-On 26 October 2026, the user directed that hosting be left out because a different hosting destination will be selected later. The Phase 1 engineering scope includes local/CI validation, provider-neutral configuration contracts, encrypted data handling, diagnostics and operational design. H-01 carries hosted infrastructure, managed-secret integration, deployed alerts, restore evidence and operational activation. Hosting is no longer a Phase 1 blocker. Accountable phase acceptance remains a separate review outcome.
+On 26 October 2026, the user directed that hosting be left out because a different hosting destination will be selected later. The Phase 1 engineering scope includes local/CI validation, provider-neutral configuration contracts, encrypted data handling, diagnostics and operational design. H-01 carries hosted infrastructure, managed-secret integration, deployed alerts, restore evidence and operational activation. Hosting is outside Phase 1 closure. The accountable phase acceptance is recorded in section 11.2.
 
 ### 1.1 Recorded prerequisite evidence
 
@@ -453,30 +453,38 @@ Canonical checks for a final commit are `composer validate --strict`, `composer 
 
 ### 11.1 Task completion matrix
 
-| ID | Foundation artifact | Status at this document baseline | Completion evidence still required |
+| ID | Foundation artifact | Engineering status | Acceptance and later gates |
 | --- | --- | --- | --- |
-| P01-T01 | Version inventory and reuse and compatibility baseline, section 2 | Engineering verified | Accountable reviewer outcome |
-| P01-T02 | Full logical dictionary, section 4, immutable offer and approval contracts | Engineering reviewed. Acceptance pending | Approved detailed design and resolution milestones for dependent financial decisions |
-| P01-T03 | Explicit V2 boundary, actual callback and future consumer contracts, section 5 | Engineering checks passed | Accountable API and security review |
-| P01-T04 | Typed partner, issuer, screening, settlement, and notification contracts, section 6 | Engineering reviewed. Simulators verified | Accountable contract review. Provider-specific evidence remains required before enablement |
-| P01-T05 | Staff shell, MFA, roles, scopes, and elevation, section 7 | Implemented. CI passed | Access reviewer and bootstrap authority |
-| P01-T06 | Append-only audit, masked views, cases, and SLA state, sections 4 and 7 | Implemented. SQLite and MySQL CI passed | Accountable review of metadata and the provisional SLA |
-| P01-T07 | Durable inbox, independent delivery, claims, and recovery, section 8 | Implemented. Failure and concurrency checks passed | Accountable operational review |
-| P01-T08 | Provider-neutral templates, encrypted data handling, local/CI isolation, diagnostics, monitoring and resilience/restore design, section 9 | Engineering scope verified | Accountable phase review. Hosted resources and managed-store integration belong to H-01 |
-| P01-T09 | CI, typed simulators, fixtures, and failure and concurrency conventions, section 10 | Engineering verified | Accountable phase review |
+| P01-T01 | Version inventory and reuse and compatibility baseline, section 2 | Engineering verified | Accepted within the Phase 1 outcome in section 11.2 |
+| P01-T02 | Full logical dictionary, section 4, immutable offer and approval contracts | Engineering reviewed | Accepted within Phase 1. Dependent financial decisions remain required at the milestones in the plan |
+| P01-T03 | Explicit V2 boundary, actual callback and future consumer contracts, section 5 | Engineering checks passed | Accepted within the Phase 1 outcome in section 11.2 |
+| P01-T04 | Typed partner, issuer, screening, settlement, and notification contracts, section 6 | Engineering reviewed. Simulators verified | Accepted within Phase 1. Provider-specific evidence remains required before enablement |
+| P01-T05 | Staff shell, MFA, roles, scopes, and elevation, section 7 | Implemented. CI passed | Accepted within Phase 1. Hosted bootstrap authority remains part of H-01 |
+| P01-T06 | Append-only audit, masked views, cases, and SLA state, sections 4 and 7 | Implemented. SQLite and MySQL CI passed | Accepted within Phase 1. Live SLA and retention decisions remain OD-15/OD-16 |
+| P01-T07 | Durable inbox, independent delivery, claims, and recovery, section 8 | Implemented. Failure and concurrency checks passed | Accepted within the Phase 1 outcome in section 11.2 |
+| P01-T08 | Provider-neutral templates, encrypted data handling, local/CI isolation, diagnostics, monitoring and resilience/restore design, section 9 | Engineering scope verified | Accepted within Phase 1. Hosted resources and managed-store integration belong to H-01 |
+| P01-T09 | CI, typed simulators, fixtures, and failure and concurrency conventions, section 10 | Engineering verified | Accepted within the Phase 1 outcome in section 11.2 |
 
 Engineering owner for P01-T01 through P01-T09: Codex in this repository task. Independent engineering review was provided by the Codex access, event/contract and audit/case reviewers, with PR feedback resolved in code. The engineering completion date is 26 October 2026. Evidence is recorded in section 12 and PR #28. These records assign no production operating role and grant no legal or compliance approval.
 
-On 26 October 2026, the user designated Erastus as the accountable Phase 1 security/operations reviewer. Erastus's review covers the current deliverables and P01-A01 through P01-A04, with hosting excluded under H-01. The assignment establishes review ownership. Acceptance still requires Erastus's recorded outcome, evidence reference and decision date. No review outcome has been supplied.
+On 26 October 2026, the user designated Erastus as the accountable Phase 1 security/operations reviewer and subsequently reported his outcome as "accepted". His review covers the current Phase 1 deliverables and P01-A01 through P01-A04, with hosting excluded under H-01.
 
 ### 11.2 Acceptance review
 
 | Criterion | Evidence to inspect | Status |
 | --- | --- | --- |
-| P01-A01 | V2 contract examples, confirmation and approval guard tests, safe errors, and declared external capabilities | Local and hosted checks passed. Accountable contract review pending |
-| P01-A02 | MFA, role, scope, elevation, masking, and append-only audit tests | Local and hosted checks passed. Accountable security review pending |
-| P01-A03 | Duplicate, interrupted, concurrent, and notification-failure tests plus recovery evidence | Local and hosted checks passed. Accountable phase review pending |
-| P01-A04 | V1 compatibility suite and admission-disabled recovery tests | Local and hosted checks passed. Accountable phase review pending |
+| P01-A01 | V2 contract examples, confirmation and approval guard tests, safe errors, and declared external capabilities | Local/CI checks passed. Accepted within Erastus's reported Phase 1 outcome |
+| P01-A02 | MFA, role, scope, elevation, masking, and append-only audit tests | Local/CI checks passed. Accepted within Erastus's reported Phase 1 outcome |
+| P01-A03 | Duplicate, interrupted, concurrent, and notification-failure tests plus recovery evidence | Local/CI checks passed. Accepted within Erastus's reported Phase 1 outcome |
+| P01-A04 | V1 compatibility suite and admission-disabled recovery tests | Local/CI checks passed. Accepted within Erastus's reported Phase 1 outcome |
+
+| Review record | Evidence |
+| --- | --- |
+| Reviewer and outcome | Erastus: accepted, as directly reported by the user |
+| Record date and source | 26 October 2026. The user answered "accepted" to the Phase 1 review-outcome question in this repository chat. No separate reviewer attachment or decision date was supplied |
+| Reviewed baseline | Phase 1 implementation in merged PR #28, reviewer assignment in merged PR #29, and foundations/plan v0.4. Version 0.5 records closure without changing application behavior |
+| Scope and evidence | P01-T01 through P01-T09 and P01-A01 through P01-A04. Implementation, independent engineering reviews, resolved findings and passing CI are recorded in section 12 |
+| Closure and remaining gates | Phase 1 complete. Hosting remains H-01. Legal, funding, issuer, commercial and live operating decisions remain at their existing later milestones. No production activation is authorized |
 
 Phase 1 closes only when its deliverables exist, its acceptance criteria pass, relevant entry decisions have recorded outcomes, and accountable reviewers record acceptance. This document and green CI alone cannot close the phase. The phased implementation plan remains the task baseline; no task is completed merely because this reference exists.
 
@@ -488,7 +496,7 @@ Independent implementation review covered the staff module, supplied-value contr
 
 The 26 existing application method/path/action mappings were retained. The original BRD SHA-256 remains `c012a8c7e6fc409b28cba39a56051f7920bc5e003d45493e63832cb1b570acec`.
 
-The revised plan checks Phase 1 engineering tasks and acceptance scenarios against the implemented code, reviews and CI. Phase acceptance remains in review. Hosting records in section 9 belong to the user-deferred H-01 gate. Other implementation phases remain unchecked.
+The revised plan checks Phase 1 engineering tasks and acceptance scenarios against the implemented code, reviews and CI. The user-reported acceptance in section 11.2 closes Phase 1. Hosting records in section 9 belong to the user-deferred H-01 gate. Other implementation phases remain unchecked.
 
 ### 12.1 CI correction history and environment discovery
 
@@ -514,7 +522,7 @@ Independent review of that code commit found no blocking findings. Both PR revie
 
 The current cloud account can see an active Firebase-labelled project named `wafaa`, with ID `wafaa-68098`. Cloud Run is disabled in that project. No repository configuration identifies that project as the approved Pull2Spend target. No API was enabled and no resource was created or renamed during discovery.
 
-The user subsequently directed that hosting be left out of the current phase. The historical project discovery does not select a target. H-01 will record the later hosting destination, access, secret-store integration and operating owners. The current Phase 1 engineering scope is verified. Accountable phase acceptance remains pending independently of hosting.
+The user subsequently directed that hosting be left out of the current phase. The historical project discovery does not select a target. H-01 will record the later hosting destination, access, secret-store integration and operating owners. The current Phase 1 engineering scope is verified and accepted through the user-reported outcome in section 11.2.
 
 ### 12.3 Revision history
 
@@ -524,3 +532,4 @@ The user subsequently directed that hosting be left out of the current phase. Th
 | 0.2 | 26 October 2026 | Recorded the green corrected code baseline, resolved review findings and the pending user-supplied environment decision |
 | 0.3 | 26 October 2026 | Apply the user-directed hosting deferral. Verify revised P01-T08 repository deliverables and move hosted environment, managed-secret and activation evidence to H-01. Keep phase acceptance distinct from engineering verification |
 | 0.4 | 26 October 2026 | Record Erastus's user-designated security/operations review ownership and the merge into dev with passing post-merge CI. Preserve the pending review outcome and hosting deferral |
+| 0.5 | 26 October 2026 | Record Erastus's acceptance as directly reported by the user and close Phase 1. Preserve the hosting deferral, future decision gates and unchanged implementation |
