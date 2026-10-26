@@ -2,7 +2,7 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.6 |
+| Version | 0.7 |
 | Date | 26 October 2026 |
 | Status | Draft for delivery planning and business review |
 | Business owner | Bankole, as named in the BRD |
@@ -63,6 +63,7 @@ Each applicable offer/snapshot/transaction retains the supplied points quantity,
 | 0.4 | 26 October 2026 | Record Erastus as the user-designated Phase 1 security/operations reviewer, the merge into dev and passing post-merge CI. Acceptance remains pending the recorded review outcome. |
 | 0.5 | 26 October 2026 | Record Erastus's acceptance as reported by the user and close Phase 1. Retain the hosting deferral, later business/operating gates, task IDs and other phases' status. |
 | 0.6 | 26 October 2026 | Record ongoing Phase 2 backend/mobile implementation, its review procedure and the user's confirmation that verification services and policy are not selected. Keep all Phase 2 completion gates open. |
+| 0.7 | 26 October 2026 | Record the Phase 2 completion audit, passing identity/native CI and notification regressions. Mark Phase 2 blocked on unselected services, approved policy and remaining device/review evidence; preserve task IDs and unchecked completion gates. |
 
 The illustrative partner response is **10,000 points with a supplied monetary value of QAR 350.00.** Under the deducted-fee example, platform share at 12% is QAR 42.00, wallet credit is QAR 308.00, partner incentive at 25% of platform share is QAR 10.50 and platform retained revenue is QAR 31.50. Point-funding settlement obligations remain separate from the incentive; the example does not approve a funding direction or amount. The partner-billed fee variant still credits QAR 350.00 where that agreed model applies.
 
@@ -242,7 +243,9 @@ The mobile change preserves development baseline `67a699b`, its declared depende
 
 At mobile revision `151f65d`, identity CI, the Android debug APK build and unsigned iOS build pass. The full Linux compatibility suite reports 763 passes / 50 failures and remains a failing gate. Initial CI setup failures were corrected by committing the resolved Flutter lockfile and selecting Xcode 16.4 for existing Firebase Swift syntax; declared package dependencies were unchanged. Native compilation and physical-device verification are separate evidence: biometric enrollment, cancellation, key invalidation and fallback still require physical iOS/Android checks. None of these results closes Phase 2 or constitutes deployment evidence.
 
-A follow-up at mobile revision `a6d5aac` corrects notification token handling in the retained mobile service: opaque tokens no longer fail on short lengths or appear in diagnostics, refresh listeners belong to the current session, removal follows any in-flight registration, and switching accounts removes the previous registration before new setup even if permission is denied. Ten failing-before regressions now pass. The combined identity/notification suite passes 50 tests; strict analysis of the modified service/tests is clean. The complete local suite passes 774 tests with 50 existing failures, resolving one baseline failure with no new failure labels. This is mocked SDK/repository evidence; it does not establish live push delivery or selected-service readiness. CI reruns for this revision.
+A follow-up at mobile revision `a6d5aac` corrects notification token handling in the retained mobile service: opaque tokens no longer fail on short lengths or appear in diagnostics, refresh listeners belong to the current session, removal follows any in-flight registration, and switching accounts removes the previous registration before new setup even if permission is denied. Ten failing-before regressions now pass. The combined identity/notification suite passes 50 tests; strict analysis of the modified service/tests is clean. The complete local suite passes 774 tests with 50 existing failures, resolving one baseline failure with no new failure labels. CI at this revision passes identity analysis/tests and both native builds; full Linux compatibility remains failing with 774 passes / 49 failures. This is mocked SDK/repository and compilation evidence; it does not establish live push delivery or selected-service readiness.
+
+**Completion audit outcome - 26 October 2026: Blocked.** The working KYC integration deliverable and P02-T03/P02-T04 require selected services and their authenticated protocols; the user confirmed that these services are not selected. Approved notice content/versions, KYC/risk/session/evidence policy, physical biometric verification and accountable Phase 2 acceptance also remain unrecorded. P02-T01-P02-T09 and P02-A01-P02-A04 therefore remain open. The next integration work requires the selected-service documentation/sandbox access references and approved policy/notice baseline, followed by actual capture, evidence access, provider contract journeys, device checks and review. Hosting remains excluded under H-01.
 
 Compliance reviewers use this procedure for the implemented workflow:
 
@@ -582,7 +585,7 @@ The user deferred hosting on 26 October 2026. H-01 covers hosting selection, iso
 | --- | --- | --- | --- |
 | 0 - Decisions and feasibility | Planned | Pending | Pending |
 | 1 - Foundations | Complete | Merged into dev with passing post-merge CI. See [foundations evidence](PULL2SPEND_PHASE1_FOUNDATIONS.md). Erastus: accepted, as directly reported by the user. Hosting deferred to H-01 | 26 October 2026 (user report date) |
-| 2 - Identity | In progress | Backend and Flutter implementation under verification. Services and policy not selected; native/device and accountable acceptance evidence remain open. See section 5 | Pending |
+| 2 - Identity | Blocked | Engineering completion audit recorded in section 5. Services and approved policy are not selected; physical-device and accountable acceptance evidence remain open. Identity/native CI passes, while legacy compatibility remains failing | Pending |
 | 3 - Connections | Planned | Pending | Pending |
 | 4 - Ledger and rules | Planned | Pending | Pending |
 | 5 - Redemption | Planned | Pending | Pending |
