@@ -142,7 +142,7 @@ jobs:
       - name: Run compatibility and foundation suite on MySQL
         run: composer test
       - name: Run concurrent workers against disposable MySQL database
-        run: php artisan test --compact tests/Feature/Services/FoundationConcurrencyTest.php
+        run: php artisan test --compact tests/Feature/Services/FoundationConcurrencyTest.php tests/Feature/ConsumerSecurityConcurrencyTest.php tests/Feature/Services/ConsumerContactConcurrencyTest.php tests/Feature/Services/ConsumerEnrollmentConcurrencyTest.php
         env:
           FOUNDATION_CONCURRENCY_DRIVER: mysql
           FOUNDATION_CONCURRENCY_DATABASE: pull2spend_test

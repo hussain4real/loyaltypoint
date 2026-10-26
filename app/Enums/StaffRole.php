@@ -16,7 +16,8 @@ enum StaffRole: string
     public function permissions(): array
     {
         return match ($this) {
-            self::Operations, self::Compliance => ['dashboard.read', 'cases.read', 'cases.manage', 'audit.read', 'elevations.manage'],
+            self::Operations => ['dashboard.read', 'cases.read', 'cases.manage', 'audit.read', 'elevations.manage'],
+            self::Compliance => ['dashboard.read', 'cases.read', 'cases.manage', 'audit.read', 'elevations.manage', 'kyc.review', 'kyc.evidence.read', 'consumer.restrict'],
             self::Finance => ['dashboard.read', 'cases.read', 'cases.manage', 'audit.read'],
             self::Support => ['dashboard.read', 'cases.read', 'cases.manage'],
             self::PartnerViewer => ['dashboard.read', 'cases.read'],

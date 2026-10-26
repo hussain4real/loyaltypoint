@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\RegisterRequest;
+use App\Models\ConsumerIdentity;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,8 @@ class AuthController extends Controller
     {
         $user = User::where('email', $request->string('email')->toString())->first();
 
-        if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)) {
+        if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)
+            || ConsumerIdentity::where('user_id', $user->id)->exists()) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\RequestOtpRequest;
 use App\Http\Requests\Api\V1\VerifyOtpRequest;
+use App\Models\ConsumerIdentity;
 use App\Models\Provider;
 use App\Models\User;
 use App\Models\VendorUserLink;
@@ -151,6 +152,10 @@ class VendorAuthController extends Controller
                     ], 422);
                 }
             }
+        }
+
+        if (ConsumerIdentity::query()->where('user_id', $user->id)->exists()) {
+            return response()->json(['message' => 'Authentication failed.'], 422);
         }
 
         $result = $this->otpService->verify(

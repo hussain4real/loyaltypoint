@@ -10,12 +10,13 @@ use App\Http\Controllers\Api\V1\VendorCustomerController;
 use App\Http\Controllers\Api\V1\VendorExchangeController;
 use App\Http\Controllers\Api\V1\VendorPointController;
 use App\Http\Controllers\Api\V2\FoundationCallbackController;
+use App\Http\Middleware\RejectLegacyConsumerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware([RejectLegacyConsumerAccess::class, 'auth:sanctum']);
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +24,7 @@ Route::get('/user', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('v1')->group(function (): void {
+Route::prefix('v1')->middleware(RejectLegacyConsumerAccess::class)->group(function (): void {
     // Authentication endpoints (public - no auth required)
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
@@ -87,3 +88,5 @@ Route::prefix('v1')->group(function (): void {
 
 Route::post('/v2/foundation/callbacks/{source}', FoundationCallbackController::class)
     ->where('source', '[a-z0-9-]{1,64}')->middleware('throttle:60,1')->name('v2.foundation.callbacks');
+
+require __DIR__.'/consumer.php';

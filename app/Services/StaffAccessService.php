@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class StaffAccessService
 {
@@ -40,14 +41,21 @@ class StaffAccessService
     /** @param Builder<Model> $query
      * @return Builder<Model>
      */
-    public function scopeQuery(Builder $query, User $actor, string $permission = 'cases.read'): Builder
+    public function scopeQuery(Builder $query, User $actor, string $permission = 'cases.read', string $customerColumn = 'customer_id', ?string $partnerColumn = 'partner_id'): Builder
     {
+        if (! in_array($customerColumn, ['customer_id', 'user_id'], true) || ! in_array($partnerColumn, ['partner_id', null], true)) {
+            throw new InvalidArgumentException('Unsupported staff scope mapping.');
+        }
         $staff = $this->membership($actor, $permission);
         if ($staff->partner_ids !== null) {
-            $query->whereIn('partner_id', $staff->partner_ids);
+            if ($partnerColumn === null) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn($partnerColumn, $staff->partner_ids);
+            }
         }
         if ($staff->customer_ids !== null) {
-            $query->whereIn('customer_id', $staff->customer_ids);
+            $query->whereIn($customerColumn, $staff->customer_ids);
         }
 
         return $query;

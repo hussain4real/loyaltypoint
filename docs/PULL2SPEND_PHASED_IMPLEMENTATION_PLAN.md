@@ -2,7 +2,7 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.5 |
+| Version | 0.6 |
 | Date | 26 October 2026 |
 | Status | Draft for delivery planning and business review |
 | Business owner | Bankole, as named in the BRD |
@@ -62,6 +62,7 @@ Each applicable offer/snapshot/transaction retains the supplied points quantity,
 | 0.3 | 26 October 2026 | Record the user-directed hosting deferral, verify Phase 1 engineering tasks against implementation and CI, and retain accountable phase acceptance as a separate review outcome. |
 | 0.4 | 26 October 2026 | Record Erastus as the user-designated Phase 1 security/operations reviewer, the merge into dev and passing post-merge CI. Acceptance remains pending the recorded review outcome. |
 | 0.5 | 26 October 2026 | Record Erastus's acceptance as reported by the user and close Phase 1. Retain the hosting deferral, later business/operating gates, task IDs and other phases' status. |
+| 0.6 | 26 October 2026 | Record ongoing Phase 2 backend/mobile implementation, its review procedure and the user's confirmation that verification services and policy are not selected. Keep all Phase 2 completion gates open. |
 
 The illustrative partner response is **10,000 points with a supplied monetary value of QAR 350.00.** Under the deducted-fee example, platform share at 12% is QAR 42.00, wallet credit is QAR 308.00, partner incentive at 25% of platform share is QAR 10.50 and platform retained revenue is QAR 31.50. Point-funding settlement obligations remain separate from the incentive; the example does not approve a funding direction or amount. The partner-billed fee variant still credits QAR 350.00 where that agreed model applies.
 
@@ -218,6 +219,30 @@ Allow consumers to register, verify identity and obtain controlled eligibility f
 - [ ] P02-A04 Unverified or restricted users are blocked consistently from every financial operation; sensitive evidence access is role-limited and audited.
 
 **FDD alignment:** FR-1.1-FR-1.9; AC-01-AC-03 and eligibility portions of AC-13/AC-22. New-device/location challenge is implemented here if included in the approved S scope.
+
+### Implementation and review record - 26 October 2026
+
+The backend implementation is in the Laravel repository. The consumer app is the Flutter project `app/` in [Wafaa mobile](https://github.com/Wafaa-app/wafaa). Pull2Spend mode uses Laravel V2 as its identity authority. The previous Firebase flow remains an explicit legacy mode. Existing application and infrastructure identifiers are retained.
+
+| Tasks | Implemented evidence | Remaining completion evidence |
+| --- | --- | --- |
+| P02-T01, P02-T09 | Encrypted pending registration, purpose-bound hashed contact codes, atomic attempts/consumption, request limits, durable delivery/recovery, verified activation and legacy-credential isolation. Backend tests include real concurrent processes | Approved current notice content/versions, actual permitted delivery configuration and review of the integrated consumer journey |
+| P02-T02, P02-T08 | Password fallback, expiring device/session authority, inactivity/background lock, action-bound step-up, device revocation, native P256 signing bridges and Flutter onboarding/security/remediation screens. Native keys remain on the device; key possession is not hardware attestation | Approved session/step-up policy, successful native builds and physical iOS/Android biometric, cancellation, invalidation and fallback evidence |
+| P02-T03, P02-T04 | Trusted verification boundary, strict authenticated local fixture callbacks and owned evidence references. The default adapter and capture/upload path report unavailable | Selected document/liveness and sanctions/PEP/adverse-media services, their authenticated protocol, sandbox evidence and approved result mapping. Fixtures do not complete these tasks |
+| P02-T05, P02-T06 | Scoped MFA compliance queues, immutable review/receipt evidence, latched screening exceptions, independent restrictions, reverification and central current eligibility checks. Foreign resource lookups are scoped before retrieval | Approved KYC/risk, evidence access/retention and review policies; actual protected provider evidence access; integration of the guard at later financial commands |
+| P02-T07 | One durable initial-enrollment intent across duplicate callbacks, concurrent approvals and reverification. Notifications remain independent. Fixture intents carry their assurance and no financial authority | Selected-service/policy acceptance. Phase 4/6 consumers must recheck eligibility and prove one wallet/card effect; Phase 2 creates no balance or real issuer request |
+
+On 26 October 2026, the user confirmed that verification providers and the approved policy are **not selected yet**. They remain external completion gates. Hosting remains excluded under H-01. All Phase 2 task and acceptance checkboxes stay unchecked until their complete evidence and accountable review exist. Local defaults and fixture results do not approve policy or establish real KYC verification.
+
+The [V2 OpenAPI contract](pull2spend-v2.openapi.yaml), version 0.2.0, distinguishes implemented identity routes, local fixture routes, unavailable provider capture and planned later-phase operations. Backend consumer identity admission is disabled by default. New V2 credentials cannot bypass session controls through V1 or the legacy `/api/user` route. Ordinary legacy credentials retain their existing scope.
+
+Compliance reviewers use this procedure for the implemented workflow:
+
+1. Sign in to the back office with current MFA and open `/backoffice/identity/reviews`. Only the scoped Compliance role has identity review, evidence and restriction permissions.
+2. Inspect the current revision, authenticated check summaries and unresolved check names. Evidence references are audited; the actual protected provider viewer requires the selected service. Generic case closure does not approve identity.
+3. Submit the expected revision, coded reason, evidence reference and decision. Approval requires all mandatory checks to be complete and every latched screening exception explicitly resolved. Stale review attempts are rejected.
+4. Request reverification or impose/clear an account restriction through its separate audited action. A fresh adverse observation after approval forces reverification and creates a new owned incident. Older clear callbacks cannot restore approval.
+5. Check the immutable decision/audit evidence and the consumer-safe status/notification. Verify central eligibility separately. Review actions never credit a wallet, issue a card or settle funds.
 
 ## 6. Phase 3 - Loyalty connections and point aggregation
 
@@ -549,7 +574,7 @@ The user deferred hosting on 26 October 2026. H-01 covers hosting selection, iso
 | --- | --- | --- | --- |
 | 0 - Decisions and feasibility | Planned | Pending | Pending |
 | 1 - Foundations | Complete | Merged into dev with passing post-merge CI. See [foundations evidence](PULL2SPEND_PHASE1_FOUNDATIONS.md). Erastus: accepted, as directly reported by the user. Hosting deferred to H-01 | 26 October 2026 (user report date) |
-| 2 - Identity | Planned | Pending | Pending |
+| 2 - Identity | In progress | Backend and Flutter implementation under verification. Services and policy not selected; native/device and accountable acceptance evidence remain open. See section 5 | Pending |
 | 3 - Connections | Planned | Pending | Pending |
 | 4 - Ledger and rules | Planned | Pending | Pending |
 | 5 - Redemption | Planned | Pending | Pending |
