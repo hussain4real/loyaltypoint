@@ -2,11 +2,11 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.2 |
+| Version | 0.3 |
 | Date | 26 October 2026 |
 | Status | Draft for delivery planning and business review |
 | Business owner | Bankole, as named in the BRD |
-| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.2 |
+| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.3 |
 | Business source | [Pull2Spend BRD](Pull2Spend_BRD_2.docx), Draft v1.0 |
 | Business review copy | [FDD PDF](PULL2SPEND_FDD.pdf) |
 | Plan review copy | [Implementation plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
@@ -36,7 +36,7 @@
 
 This plan turns the FDD into a sequence of reviewable implementation phases. Every phase has a goal, dependencies, task checklist, deliverables, and measurable acceptance criteria. It covers the change from provider-to-provider point exchange to externally verified point redemption, a monetary wallet, virtual card spend, and auditable partner settlement.
 
-All implementation and phase-acceptance checkboxes remain unchecked in this revision. Existing loyalty functionality is context for reuse, not evidence that a new task is complete. This document plans implementation; creating it does not implement, deploy, or approve a financial service.
+Phase 1 task and acceptance checkboxes record verified repository implementation and tests. Other phases remain unchecked. Phase 1 is in review until an accountable reviewer records phase acceptance. Checkbox changes are supported by code, independent engineering review and CI evidence, not by this document alone. No deployment or financial-service approval is implied.
 
 Use these rules throughout delivery:
 
@@ -59,6 +59,7 @@ Each applicable offer/snapshot/transaction retains the supplied points quantity,
 | --- | --- | --- |
 | 0.1 | 5 October 2026 | Initial phased delivery plan based on FDD v0.1. |
 | 0.2 | 26 October 2026 | Confirm Pull2Spend branding, align to FDD v0.2 and record the BRS review feedback. Revise partner-value contracts, snapshots, quotes, commercial inputs, configuration, validation and acceptance without changing task IDs or completion status. |
+| 0.3 | 26 October 2026 | Record the user-directed hosting deferral, verify Phase 1 engineering tasks against implementation and CI, and retain accountable phase acceptance as a separate review outcome. |
 
 The illustrative partner response is **10,000 points with a supplied monetary value of QAR 350.00.** Under the deducted-fee example, platform share at 12% is QAR 42.00, wallet credit is QAR 308.00, partner incentive at 25% of platform share is QAR 10.50 and platform retained revenue is QAR 31.50. Point-funding settlement obligations remain separate from the incentive; the example does not approve a funding direction or amount. The partner-billed fee variant still credits QAR 350.00 where that agreed model applies.
 
@@ -146,32 +147,36 @@ Establish an implementable business model and confirm the external capabilities 
 
 Provide shared contracts, access controls, event processing and operational evidence so later financial features can be implemented consistently.
 
-**Entry dependencies:** approved Phase 0 decisions relevant to the work. **Owners:** engineering, security/compliance and operations.
+**Entry dependencies:** approved Phase 0 decisions relevant to the behavior being enabled. Current work enables no real financial service. **Owners:** engineering, security/compliance and operations.
+
+On 26 October 2026, the user excluded hosting from the current phase because it will be selected elsewhere later. Provider-specific infrastructure, live secrets, deployed alerts and operational activation move to H-01. Local/CI isolation, protected data controls, configuration contracts and resilience design remain in Phase 1.
 
 ### Task checklist
 
-- [ ] P01-T01 Verify installed application/package versions and assess reusable legacy components; identify changes needed without assuming earlier specifications match deployed behavior.
-- [ ] P01-T02 Produce the detailed logical/data design for identity, connections, partner value offers, quotes, redemption legs, wallet accounts, events, rules, settlement and cases; retain supplied points/amount/currency, source/time, references and validity where supplied, confirmation evidence and linked consumer approvals; omit partner point-conversion configuration/entities.
-- [ ] P01-T03 Define and review versioned consumer/internal API contracts, ownership checks, safe error responses and idempotency semantics; decide the new API version explicitly.
-- [ ] P01-T04 Define connector, issuer, screening and settlement contracts, including supplied quantity/monetary amount/currency, quote/transaction references and validity where supplied, authoritative confirmation of accepted terms, callback verification, operation IDs, status queries and recovery obligations. Specify changed-offer reapproval and currency-mismatch handling without introducing FX.
-- [ ] P01-T05 Implement the back-office shell with MFA, roles, least-privilege permissions, partner/customer scoping and time-bound privileged elevation.
-- [ ] P01-T06 Implement append-only audit events, masked operational views and a shared case framework with owners, SLA tracking and resolution evidence.
-- [ ] P01-T07 Establish durable job/event processing, callback deduplication, bounded retries, recovery scheduling and notification dispatch independent of financial completion.
-- [ ] P01-T08 Configure development/staging isolation, managed secrets/keys, protected data handling and monitoring; document the production resilience/backup design.
-- [ ] P01-T09 Establish CI checks, integration simulators, contract fixtures and failure/concurrency validation conventions; record baseline legacy compatibility checks.
+- [x] P01-T01 Verify installed application/package versions and assess reusable legacy components; identify changes needed without assuming earlier specifications match deployed behavior.
+- [x] P01-T02 Produce the detailed logical/data design for identity, connections, partner value offers, quotes, redemption legs, wallet accounts, events, rules, settlement and cases; retain supplied points/amount/currency, source/time, references and validity where supplied, confirmation evidence and linked consumer approvals; omit partner point-conversion configuration/entities.
+- [x] P01-T03 Define and review versioned consumer/internal API contracts, ownership checks, safe error responses and idempotency semantics; decide the new API version explicitly.
+- [x] P01-T04 Define connector, issuer, screening and settlement contracts, including supplied quantity/monetary amount/currency, quote/transaction references and validity where supplied, authoritative confirmation of accepted terms, callback verification, operation IDs, status queries and recovery obligations. Specify changed-offer reapproval and currency-mismatch handling without introducing FX.
+- [x] P01-T05 Implement the back-office shell with MFA, roles, least-privilege permissions, partner/customer scoping and time-bound privileged elevation.
+- [x] P01-T06 Implement append-only audit events, masked operational views and a shared case framework with owners, SLA tracking and resolution evidence.
+- [x] P01-T07 Establish durable job/event processing, callback deduplication, bounded retries, recovery scheduling and notification dispatch independent of financial completion.
+- [x] P01-T08 Deliver provider-neutral environment and secret/key injection contracts, protected data handling, fail-closed diagnostics and monitoring; validate local/CI isolation and document production resilience/backup design. Hosting selection, hosted development/staging provisioning, managed-store integration and operational activation are deferred to H-01 by the user.
+- [x] P01-T09 Establish CI checks, integration simulators, contract fixtures and failure/concurrency validation conventions; record baseline legacy compatibility checks.
 
 ### Deliverables
 
 - Reviewed API/data/integration contracts and architecture decisions.
-- Working access/audit/case foundations, event infrastructure and isolated test environments.
+- Working access/audit/case foundations, event infrastructure and isolated local/CI test environments.
 - CI baseline, contract fixtures and an operational monitoring plan.
 
 ### Acceptance criteria
 
-- [ ] P01-A01 Contract examples specify ownership, eligibility, idempotency conflicts, errors and asynchronous outcomes, supplied points/amount/currency, references/validity where supplied and authoritative confirmation. Missing executable values, expired/unconfirmed terms and changed offers block commitment pending valid terms and renewed approval; document external capability assumptions without requiring conversion rules.
-- [ ] P01-A02 MFA and role/scoping tests deny unauthorized access; audit records contain actor/action/reason without secrets or sensitive payloads.
-- [ ] P01-A03 Duplicate callbacks, interrupted jobs and failed notifications are handled without duplicate side effects or loss of durable work.
-- [ ] P01-A04 Relevant existing API behavior has a recorded compatibility baseline; new capabilities can be disabled independently without losing committed event processing.
+- [x] P01-A01 Contract examples specify ownership, eligibility, idempotency conflicts, errors and asynchronous outcomes, supplied points/amount/currency, references/validity where supplied and authoritative confirmation. Missing executable values, expired/unconfirmed terms and changed offers block commitment pending valid terms and renewed approval; document external capability assumptions without requiring conversion rules.
+- [x] P01-A02 MFA and role/scoping tests deny unauthorized access; audit records contain actor/action/reason without secrets or sensitive payloads.
+- [x] P01-A03 Duplicate callbacks, interrupted jobs and failed notifications are handled without duplicate side effects or loss of durable work.
+- [x] P01-A04 Relevant existing API behavior has a recorded compatibility baseline; new capabilities can be disabled independently without losing committed event processing.
+
+**Engineering evidence:** [Phase 1 foundations](PULL2SPEND_PHASE1_FOUNDATIONS.md), [PR #28](https://github.com/hussain4real/loyaltypoint/pull/28), and [CI run 40289763073](https://github.com/hussain4real/loyaltypoint/actions/runs/40289763073). The reviewed code passes 521 tests with 1,677 assertions on SQLite and MySQL, plus a separate MySQL concurrent-worker test. Independent engineering review and the resolved PR findings support the checked items. Accountable phase acceptance remains pending.
 
 **FDD alignment:** sections 4, 14-16; AC-22; platform portions of AC-09, AC-12 and AC-23.
 
@@ -436,7 +441,7 @@ Move verified consumers and approved partners into production while preserving o
 
 - [ ] P09-T01 Rehearse legacy mapping/cutover with preserved histories, ownership evidence, new consent and KYC; verify API compatibility/deprecation communications.
 - [ ] P09-T02 Verify opening wallet/clearing/funding positions and cutoff; prevent legacy local points from being automatically duplicated as wallet credit.
-- [ ] P09-T03 Provision and verify production secrets/configuration, partner enablement, funding controls, settlement channels, issuer feeds and alert routing.
+- [ ] P09-T03 Complete H-01 hosting readiness before any hosted external integration or pilot. Provision and verify isolated hosted environments, managed secrets/keys, production configuration, partner enablement, funding controls, settlement channels, issuer feeds and alert routing after a hosting target is selected.
 - [ ] P09-T04 Prepare app distribution/mobile-wallet certification evidence and business/customer support communications for the approved pilot.
 
 - [ ] P09-T05 Train operations, support, compliance and finance; exercise escalation, dispute, failed redemption, settlement close and incident procedures.
@@ -530,12 +535,16 @@ This mapping assigns every FDD acceptance scenario to delivery evidence; it does
 
 Mock integrations and UI work may continue where they do not depend on the missing decision. They must retain the blocker and cannot be presented as evidence of financial or external readiness.
 
+### Deferred hosting-readiness gate H-01
+
+The user deferred hosting on 26 October 2026. H-01 covers hosting selection, isolated hosted development/staging and production resources, managed secrets and keys, protected storage, worker supervision, deployed monitoring/alert delivery and backup/restore evidence. The owner and destination will be assigned when hosting is selected. H-01 is required before hosted partner/issuer integration or a production pilot. It is not a current Phase 1 blocker and does not approve any existing cloud project. P09-T03 carries the delivery link. All relevant legal, funding, issuer, commercial and operational approvals remain required before the affected live capability.
+
 ## 16. Phase completion register
 
 | Phase | Status | Completion/review evidence | Review date |
 | --- | --- | --- | --- |
 | 0 - Decisions and feasibility | Planned | Pending | Pending |
-| 1 - Foundations | Planned | Pending | Pending |
+| 1 - Foundations | In review | Engineering tasks and acceptance checks verified. See [foundations evidence](PULL2SPEND_PHASE1_FOUNDATIONS.md). Hosting deferred to H-01. Accountable phase acceptance pending | 26 October 2026 |
 | 2 - Identity | Planned | Pending | Pending |
 | 3 - Connections | Planned | Pending | Pending |
 | 4 - Ledger and rules | Planned | Pending | Pending |

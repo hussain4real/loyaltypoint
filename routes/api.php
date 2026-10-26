@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\VendorAuthController;
 use App\Http\Controllers\Api\V1\VendorCustomerController;
 use App\Http\Controllers\Api\V1\VendorExchangeController;
 use App\Http\Controllers\Api\V1\VendorPointController;
+use App\Http\Controllers\Api\V2\FoundationCallbackController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -83,3 +84,6 @@ Route::prefix('v1')->group(function (): void {
         });
     });
 });
+
+Route::post('/v2/foundation/callbacks/{source}', FoundationCallbackController::class)
+    ->where('source', '[a-z0-9-]{1,64}')->middleware('throttle:60,1')->name('v2.foundation.callbacks');
