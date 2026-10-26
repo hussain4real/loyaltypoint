@@ -2,9 +2,9 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.1 |
+| Version | 0.2 |
 | Date | 26 October 2026 |
-| Status | Engineering reference and operational review baseline |
+| Status | Engineering checks passed. Operating evidence and accountable acceptance pending |
 | Scope | P01-T01 through P01-T09 and P01-A01 through P01-A04 |
 | Functional baseline | [Pull2Spend FDD](PULL2SPEND_FDD.md), version 0.2 |
 | Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.2 |
@@ -452,24 +452,24 @@ Canonical checks for a final commit are `composer validate --strict`, `composer 
 
 | ID | Foundation artifact | Status at this document baseline | Completion evidence still required |
 | --- | --- | --- | --- |
-| P01-T01 | Version inventory and reuse and compatibility baseline, section 2 | Engineering evidence recorded | Final baseline and reviewer outcome |
-| P01-T02 | Full logical dictionary, section 4, immutable offer and approval contracts | In review | Approved detailed design and resolution milestones for dependent financial decisions |
-| P01-T03 | Explicit V2 boundary, actual callback and future consumer contracts, section 5 | In review | Final contract tests, security review, and accountable API review |
-| P01-T04 | Typed partner, issuer, screening, settlement, and notification contracts, section 6 | In review | Contract review, simulator results, documented capability assumptions, and provider-specific evidence before enablement |
-| P01-T05 | Staff shell, MFA, roles, scopes, and elevation, section 7 | Implemented; local verification passed | Exact-head CI, access reviewer and bootstrap authority |
-| P01-T06 | Append-only audit, masked views, cases, and SLA state, sections 4 and 7 | Implemented; local verification passed | Exact-head MySQL CI, review of metadata and provisional SLA |
-| P01-T07 | Durable inbox, independent delivery, claims, and recovery, section 8 | Implemented; local verification passed | Exact-head persistent-database CI and accountable review |
+| P01-T01 | Version inventory and reuse and compatibility baseline, section 2 | Engineering verified | Accountable reviewer outcome |
+| P01-T02 | Full logical dictionary, section 4, immutable offer and approval contracts | Engineering reviewed. Acceptance pending | Approved detailed design and resolution milestones for dependent financial decisions |
+| P01-T03 | Explicit V2 boundary, actual callback and future consumer contracts, section 5 | Engineering checks passed | Accountable API and security review |
+| P01-T04 | Typed partner, issuer, screening, settlement, and notification contracts, section 6 | Engineering reviewed. Simulators verified | Accountable contract review. Provider-specific evidence remains required before enablement |
+| P01-T05 | Staff shell, MFA, roles, scopes, and elevation, section 7 | Implemented. CI passed | Access reviewer and bootstrap authority |
+| P01-T06 | Append-only audit, masked views, cases, and SLA state, sections 4 and 7 | Implemented. SQLite and MySQL CI passed | Accountable review of metadata and the provisional SLA |
+| P01-T07 | Durable inbox, independent delivery, claims, and recovery, section 8 | Implemented. Failure and concurrency checks passed | Accountable operational review |
 | P01-T08 | Environment templates, diagnostics, monitoring contract, resilience and restore design, section 9 | Partial, external evidence required | Actual isolated resources, managed secrets, monitoring owner, and accountable operational review |
-| P01-T09 | CI, typed simulators, fixtures, and failure and concurrency conventions, section 10 | In review | Final exact-head CI, compatibility run, evidence links, and reviewer outcome |
+| P01-T09 | CI, typed simulators, fixtures, and failure and concurrency conventions, section 10 | Engineering verified | Accountable phase review |
 
 ### 11.2 Acceptance review
 
 | Criterion | Evidence to inspect | Status |
 | --- | --- | --- |
-| P01-A01 | V2 contract examples, confirmation and approval guard tests, safe errors, and declared external capabilities | Local tests passed; accountable contract review and final CI pending |
-| P01-A02 | MFA, role, scope, elevation, masking, and append-only audit tests | Local tests passed; accountable security review and final CI pending |
-| P01-A03 | Duplicate, interrupted, concurrent, and notification-failure tests plus recovery evidence | Local tests passed; final CI and accountable review pending |
-| P01-A04 | V1 compatibility suite and admission-disabled recovery tests | Local tests passed; final CI and accountable review pending |
+| P01-A01 | V2 contract examples, confirmation and approval guard tests, safe errors, and declared external capabilities | Local and hosted checks passed. Accountable contract review pending |
+| P01-A02 | MFA, role, scope, elevation, masking, and append-only audit tests | Local and hosted checks passed. Accountable security review pending |
+| P01-A03 | Duplicate, interrupted, concurrent, and notification-failure tests plus recovery evidence | Local and hosted checks passed. Accountable phase review pending |
+| P01-A04 | V1 compatibility suite and admission-disabled recovery tests | Local and hosted checks passed. Accountable phase review pending |
 
 Phase 1 closes only when its deliverables exist, its acceptance criteria pass, relevant entry decisions have recorded outcomes, and accountable reviewers record acceptance. This document and green CI alone cannot close the phase. The phased implementation plan remains the task baseline; no task is completed merely because this reference exists.
 
@@ -483,12 +483,36 @@ The 26 existing application method/path/action mappings were retained. The origi
 
 P01-T08 and phase acceptance remain open for the named external records in section 9. The main phased plan checkboxes remain unchecked pending recorded accountable review; no implementation task is marked complete on the strength of documentation alone.
 
-
 ### 12.1 CI correction history and environment discovery
 
-The initial [Phase 1 CI run 40287759095](https://github.com/hussain4real/loyaltypoint/actions/runs/40287759095) passed PHP/SQLite, frontend and API-contract checks. MySQL reported one test-fixture failure: the year-2603 RFC 6238 vector attempted to create legacy user TIMESTAMP fields outside MySQL's range. The native algorithm is now isolated in `StaffTotp`; all six RFC vectors remain covered without future-dated database records, while real session, replay and persistence checks remain in the feature suite. The corrected head requires a fresh MySQL run; the initial failure is not relabelled as a pass.
+The initial [Phase 1 CI run 40287759095](https://github.com/hussain4real/loyaltypoint/actions/runs/40287759095) passed PHP/SQLite, frontend and API-contract checks. MySQL reported one test-fixture failure: the year-2603 RFC 6238 vector attempted to create legacy user TIMESTAMP fields outside MySQL's range. The native algorithm is now isolated in `StaffTotp`; all six RFC vectors remain covered without future-dated database records, while real session, replay and persistence checks remain in the feature suite. The corrected code head `8c112fd82097af677846d10950cb7d83fdd2fc5f` passed a separate MySQL run. The initial failure remains part of the record.
 
 Repository environment metadata returned no configured GitHub environments. A read-only Cloud Run inventory request against the legacy project named in repository deployment documentation was denied or the project could not be found. The current CLI default belongs to another project and was left unchanged. This supplies no evidence of Pull2Spend development/staging isolation. A confirmed target project, appropriate access, managed-store references and operating reviewers are still required.
 
-
 PR review also identified two workflow gaps. An expired password challenge now returns to sign-in instead of cycling through MFA. A resolved case may be reassigned to a newly eligible owner when its former owner loses access; current resolution fields reset while immutable evidence history remains. Both paths have regression coverage. These corrections are included in the subsequent reviewed head rather than hidden by rerunning the original failed head.
+
+
+### 12.2 Verified code baseline and remaining operating evidence
+
+Code commit [`8c112fd`](https://github.com/hussain4real/loyaltypoint/commit/8c112fd82097af677846d10950cb7d83fdd2fc5f) passed all four jobs in [CI run 40288559281](https://github.com/hussain4real/loyaltypoint/actions/runs/40288559281):
+
+| Check | Observed result |
+| --- | --- |
+| PHP with SQLite | Passed |
+| MySQL foundations | 521 tests passed with 1,677 assertions |
+| Separate MySQL concurrent-worker test | One test passed with 15 assertions |
+| Frontend build | Passed |
+| OpenAPI 3.1 contracts | Passed |
+
+Independent review of that code commit found no blocking findings. Both PR review threads are resolved. [PR #28](https://github.com/hussain4real/loyaltypoint/pull/28) targets `dev` and remains open. These results prove the tested engineering behavior. They do not establish environment isolation or operating acceptance.
+
+The current cloud account can see an active Firebase-labelled project named `wafaa`, with ID `wafaa-68098`. Cloud Run is disabled in that project. No repository configuration identifies that project as the approved Pull2Spend target. No API was enabled and no resource was created or renamed during discovery.
+
+The user has confirmed that they will provide the approved project and reviewers. Environment setup remains pending that information, the managed-secret destination and required access. P01-T08 and the full Phase 1 acceptance remain open.
+
+### 12.3 Revision history
+
+| Version | Date | Change |
+| --- | --- | --- |
+| 0.1 | 26 October 2026 | Added the logical model, contracts, operational design and initial engineering evidence |
+| 0.2 | 26 October 2026 | Recorded the green corrected code baseline, resolved review findings and the pending user-supplied environment decision |
