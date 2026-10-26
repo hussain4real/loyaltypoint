@@ -10,3 +10,5 @@ Route::get('/', function () {
 Route::get('/up', function () {
     return response()->json(['status' => 'ok'], 200);
 });
+
+require __DIR__.'/backoffice.php';

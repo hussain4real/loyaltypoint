@@ -29,6 +29,12 @@ return [
     */
 
     'disks' => [
+        'pull2spend_private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/pull2spend/'.env('PULL2SPEND_NAMESPACE', 'disabled')),
+            'serve' => false,
+            'throw' => true,
+        ],
 
         'local' => [
             'driver' => 'local',

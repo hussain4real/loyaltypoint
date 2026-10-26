@@ -1,0 +1,4164 @@
+openapi: 3.1.0
+info:
+  title: Pull2Spend consumer and foundation API contracts
+  version: 0.1.0
+  description: Phase 1 design baseline for technical and accountable-owner review. Every consumer operation is explicitly
+    planned and is not a registered application route. Only POST /api/v2/foundation/callbacks/{source} is implemented
+    as a disabled-by-default local/testing simulator protocol. Existing /api/v1 behavior remains separate. The authenticated
+    consumer identity is never accepted as request data; all resources are ownership-scoped before lookup/list/filter.
+    Current eligibility, consent and step-up are checked at mutation time. Planned contracts define behavior without
+    approving legal/issuer/funding/commercial/retention policies. No automatic FX, point-to-money conversion, cash
+    deposit or P2P behavior is introduced. Back-office HTML/session/MFA/internal service contracts are documented
+    in PULL2SPEND_PHASE1_FOUNDATIONS.md; this spec does not invent staff JSON routes.
+servers:
+- url: /api/v2
+  description: Version boundary only. Planned routes are absent until their later implementation phase.
+security:
+- ConsumerBearer: []
+tags:
+- name: Identity
+- name: Connections
+- name: Redemptions
+- name: Operations
+- name: Wallet
+- name: Cards
+- name: Cases
+- name: Foundation callbacks
+x-decision-gates:
+  funding_and_issuer:
+  - OD-02
+  - OD-11
+  - OD-12
+  partner_recovery:
+  - OD-04
+  - OD-09
+  commercial_and_currency:
+  - OD-03
+  - OD-06
+  - OD-07
+  - OD-08
+  scope_membership_and_policy:
+  - OD-05
+  - OD-10
+  - OD-13
+  - OD-15
+  - OD-16
+x-financial-invariants:
+- Partner supplies points quantity and equivalent monetary amount/currency; no conversion rules are requested or
+  calculated.
+- Quote/approval snapshots bind confirmed partner terms and approved commercial versions. Any offered value change,
+  including an increase, requires renewed consumer approval.
+- Currency mismatch blocks commitment until an explicitly approved design; no automatic FX.
+- Pending/unknown external outcomes retain stable operation references and recovery ownership. Timeout is not proof
+  of no debit.
+- Point-funding obligations, platform fee and Merchant Revenue Share incentive are separately recorded.
+- Financial completion requires confirmed partner legs, approved funding and balanced immutable monetary postings;
+  notifications are independent.
+paths:
+  /eligibility:
+    get:
+      operationId: getEligibility
+      summary: Read current consumer eligibility
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned read-only eligibility decision. The backend derives identity from the authenticated token.
+        Allowed actions are informative and must be checked again at mutation time.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eligibility'
+  /partners:
+    get:
+      operationId: listPartners
+      summary: List supported Loyalty Partners
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerPage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+  /connections:
+    get:
+      operationId: listConnections
+      summary: List owned connections
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionPage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    post:
+      operationId: connectPartner
+      summary: Start consented partner connection
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned. Requires current connection eligibility and configured step-up. Captures approved consent,
+        creates one durable connection intent and returns an allowlisted partner-hosted handoff. Backend-verifiable
+        callback and ownership evidence are required before connected state. Membership multiplicity follows OD-13,
+        with no implicit policy default.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionOperation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectRequest'
+  /connections/{connection_reference}:
+    get:
+      operationId: getConnection
+      summary: Read an owned connection
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connection'
+      parameters:
+      - $ref: '#/components/parameters/connection_reference'
+  /connections/{connection_reference}/revoke:
+    post:
+      operationId: revokeConnection
+      summary: Revoke future partner access
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned. Revocation immediately blocks new access/redemption and triggers protected token disposal
+        under approved retention. Existing committed obligations continue controlled completion/recovery and are
+        not discarded.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionOperation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/connection_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /connections/{connection_reference}/refresh:
+    post:
+      operationId: refreshConnection
+      summary: Refresh one owned balance
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned. Current consent, source availability and partner rate limits apply. Preserve the last
+        successful snapshot on failure; never overwrite it with zero or derive an absent monetary estimate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionOperation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/connection_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /connections/refresh:
+    post:
+      operationId: refreshConnections
+      summary: Refresh selected or all owned connections
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshBatch'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshAllRequest'
+  /connections/{connection_reference}/balance:
+    get:
+      operationId: getConnectionBalance
+      summary: Read the last owned partner observation
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned. Read-only cached snapshot; observed time, currency, source, optional validity and freshness
+        remain visible. Stale/offline data is not executable approval. Access before full KYC requires an explicitly
+        enabled release decision.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceSnapshot'
+      parameters:
+      - $ref: '#/components/parameters/connection_reference'
+  /redemption-quotes:
+    post:
+      operationId: createRedemptionQuote
+      summary: Request confirmed supplied-value quote
+      tags:
+      - Redemptions
+      x-implementation-status: planned
+      description: Planned. Each owned selected connection is checked against current KYC/account/consent/limits/capacity.
+        Every point owner supplies points and monetary value/currency. Quote preparation is asynchronous; only a
+        ready owned quote with authoritative confirmation can be approved. Missing/zero/expired/unconfirmed terms
+        or incompatible currencies block readiness. No conversion rate or automatic FX.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+            example:
+              connections:
+              - reference: connection-123
+                points: 10000
+  /redemption-quotes/{quote_reference}:
+    get:
+      operationId: getRedemptionQuote
+      summary: Read immutable quote and fees
+      tags:
+      - Redemptions
+      x-implementation-status: planned
+      description: Planned. Ready quote includes each supplied value and validity, approved commercial versions,
+        disclosed fees, total credit and completion window. Changed terms produce a new superseding quote. Illustrative
+        monetary values and timestamps are not policy defaults.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+      parameters:
+      - $ref: '#/components/parameters/quote_reference'
+  /redemption-quotes/{quote_reference}/approval:
+    post:
+      operationId: approveRedemptionQuote
+      summary: Approve displayed immutable quote
+      tags:
+      - Redemptions
+      x-implementation-status: planned
+      description: Planned. Authenticated explicit consumer approval is bound to the stored displayed digest, exact
+        sources/points/value/currency/references/validity, fees/credit and commercial versions. Current eligibility
+        and completed step-up apply. Changed terms, even increased value, require a new displayed quote and renewed
+        approval. The consumer cannot manufacture authoritative partner confirmation.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteApproval'
+      parameters:
+      - $ref: '#/components/parameters/quote_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteApprovalRequest'
+  /redemptions:
+    post:
+      operationId: confirmRedemption
+      summary: Accept approved redemption for processing
+      tags:
+      - Redemptions
+      x-implementation-status: planned
+      description: Planned. No financial commitment without current authoritative accepted partner terms, valid
+        owned quote/approval, eligibility/consent/limits/capacity and approved funding/accounting controls. Stable
+        operation key prevents duplicate intent. All-or-nothing spendable credit across partners; unknown outcomes
+        retain owned recovery/case references. No application transaction promises external atomicity.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionConfirmRequest'
+    get:
+      operationId: listRedemptions
+      summary: List owned redemption history
+      tags:
+      - Redemptions
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedemptionPage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/Until'
+      - $ref: '#/components/parameters/PartnerFilter'
+      - name: state
+        in: query
+        schema:
+          type: string
+          enum:
+          - pending
+          - processing
+          - awaiting_partner
+          - recovery_pending
+          - completed
+          - failed
+  /redemptions/{redemption_reference}:
+    get:
+      operationId: getRedemption
+      summary: Read redemption and per-partner recovery state
+      tags:
+      - Redemptions
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Redemption'
+      parameters:
+      - $ref: '#/components/parameters/redemption_reference'
+  /operations/{operation_reference}:
+    get:
+      operationId: getOperation
+      summary: Read an owned asynchronous operation
+      tags:
+      - Operations
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+      parameters:
+      - $ref: '#/components/parameters/operation_reference'
+  /wallet:
+    get:
+      operationId: getWallet
+      summary: Read funded wallet availability
+      tags:
+      - Wallet
+      x-implementation-status: planned
+      description: Planned. Approved enrollment and current financial eligibility apply. Posted balance, authorization
+        holds, restricted value, pending redemption and available-to-spend remain separate. Safeguarding/issuer
+        funding authority requires OD-02 and OD-11; no point confirmation substitutes for funding.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+  /wallet/statement:
+    get:
+      operationId: listWalletStatement
+      summary: List owned immutable wallet postings
+      tags:
+      - Wallet
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementPage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/Until'
+      - $ref: '#/components/parameters/PartnerFilter'
+  /cards:
+    get:
+      operationId: listCards
+      summary: List owned card lifecycle history
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardPage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    post:
+      operationId: resumeCardIssuance
+      summary: Resume approved automatic virtual-card issuance
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned. Approved enrollment creates one stable issuance intent automatically. This endpoint
+        resumes that intent when allowed; repeated keys/callbacks cannot create duplicate active cards. Issuer program/KYC/funding
+        eligibility and external readiness are required. Card failure is independent of an otherwise eligible funded
+        wallet.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardIssueRequest'
+  /cards/{card_reference}:
+    get:
+      operationId: getCard
+      summary: Read owned tokenized card state
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+  /cards/{card_reference}/freeze:
+    post:
+      operationId: freezeCard
+      summary: Freeze an owned card
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned freeze request. Current ownership/eligibility and configured step-up are checked. A stable
+        issuer operation key and authoritative status determine final state; unknown results remain pending and
+        owned. Holds/captures and liabilities are retained. Reissue invalidates previous tokens only according to
+        the issuer-confirmed lifecycle.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /cards/{card_reference}/unfreeze:
+    post:
+      operationId: unfreezeCard
+      summary: Unfreeze an owned card
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned unfreeze request. Current ownership/eligibility and configured step-up are checked. A
+        stable issuer operation key and authoritative status determine final state; unknown results remain pending
+        and owned. Holds/captures and liabilities are retained. Reissue invalidates previous tokens only according
+        to the issuer-confirmed lifecycle.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /cards/{card_reference}/close:
+    post:
+      operationId: closeCard
+      summary: Close an owned card
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned close request. Current ownership/eligibility and configured step-up are checked. A stable
+        issuer operation key and authoritative status determine final state; unknown results remain pending and
+        owned. Holds/captures and liabilities are retained. Reissue invalidates previous tokens only according to
+        the issuer-confirmed lifecycle.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /cards/{card_reference}/reissue:
+    post:
+      operationId: reissueCard
+      summary: Replace an owned card
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned reissue request. Current ownership/eligibility and configured step-up are checked. A
+        stable issuer operation key and authoritative status determine final state; unknown results remain pending
+        and owned. Holds/captures and liabilities are retained. Reissue invalidates previous tokens only according
+        to the issuer-confirmed lifecycle.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /cards/{card_reference}/reveal:
+    post:
+      operationId: revealCard
+      summary: Create short-lived issuer-hosted reveal
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned. Requires server-verified recent action/device/session-bound step-up. Returns only an
+        allowlisted short-lived issuer-hosted handoff. Pull2Spend never returns or persists PAN/CVV. If issuer outcome
+        is pending, return its original owned operation.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardRevealHandoff'
+        '202':
+          description: Issuer handoff pending; poll the original operation. No card details are returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /cards/{card_reference}/device-wallet-provisioning:
+    post:
+      operationId: provisionDeviceWallet
+      summary: Request Apple Pay or Google Pay provisioning
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned. Device ownership, issuer program/country/network eligibility and required step-up are
+        checked. Both device wallets are MVP requirements subject to external certification. Successful operation
+        links a short-lived issuer handoff; SDK/payment credentials remain in issuer-controlled channels.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceWalletRequest'
+  /cards/{card_reference}/device-wallet-provisioning/{operation_reference}:
+    get:
+      operationId: getDeviceWalletProvisioning
+      summary: Read owned device-wallet provisioning handoff
+      tags:
+      - Cards
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceWalletHandoff'
+        '202':
+          description: Issuer provisioning remains pending or unknown. Poll the same owned operation; no handoff
+            or token is invented.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+      parameters:
+      - $ref: '#/components/parameters/card_reference'
+      - $ref: '#/components/parameters/operation_reference'
+  /cases:
+    get:
+      operationId: listCases
+      summary: List consumer-visible owned cases
+      tags:
+      - Cases
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CasePage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    post:
+      operationId: createConsumerCase
+      summary: Open an owned support case
+      tags:
+      - Cases
+      x-implementation-status: planned
+      description: Planned. Authenticated ownership applies to linked resources. Current risk restrictions do not
+        remove access to permitted support. Messages stay in protected case storage; internal notes/audit payloads
+        are excluded from this response.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseCreateRequest'
+  /cases/{case_reference}:
+    get:
+      operationId: getConsumerCase
+      summary: Read owned case progress
+      tags:
+      - Cases
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+      parameters:
+      - $ref: '#/components/parameters/case_reference'
+  /disputes:
+    post:
+      operationId: createCardDispute
+      summary: Open an issuer-routed card dispute
+      tags:
+      - Cases
+      x-implementation-status: planned
+      description: Planned. Verify owned card/transaction/evidence. Creates a durable case and separately tracked
+        issuer operation. Provisional/final financial effects require confirmed issuer events and approved policy;
+        request acceptance alone never credits the wallet.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisputeCreateRequest'
+  /disputes/{dispute_reference}:
+    get:
+      operationId: getCardDispute
+      summary: Read owned dispute and issuer progress
+      tags:
+      - Cases
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+      parameters:
+      - $ref: '#/components/parameters/dispute_reference'
+  /auth/registrations:
+    post:
+      operationId: startRegistration
+      summary: Start contact-verified registration
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned public registration intent. Apply anti-enumeration, purpose-bound contact verification
+        and configured rate/attempt limits. No financial eligibility is granted.
+      responses:
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+      security: []
+  /auth/contact-verifications:
+    post:
+      operationId: verifyRegistrationContact
+      summary: Verify purpose-bound contact challenge
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned public challenge verification. Proof is purpose-bound, expiring, single-use and attempt-limited.
+        A repeated consumed challenge does not issue new authority.
+      responses:
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactVerification'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeProof'
+      security: []
+  /auth/challenges:
+    post:
+      operationId: startLoginChallenge
+      summary: Start password PIN or device-key login
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned public login challenge. Return a uniform response without account enumeration. Server
+        chooses permitted methods and verifies fallback/new-device policy.
+      responses:
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginChallengeRequest'
+      security: []
+  /auth/sessions:
+    post:
+      operationId: createConsumerSession
+      summary: Verify login and create device-bound session
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned public session creation. Verify the login-purpose challenge/proof, contact activation
+        and device policy. A consumed challenge cannot replay. Session inactivity lock/lifetime is policy-driven.
+        No raw biometric data is accepted.
+      responses:
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeProof'
+      security: []
+  /auth/logout:
+    post:
+      operationId: logoutConsumerSession
+      summary: Revoke the current authenticated session
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned. Durably revoke the current authenticated bearer/device session and invalidate its bound
+        step-up evidence before returning 204. Logout remains permitted for a restricted account and does not require
+        new step-up. The response has no polling operation because the revoked bearer cannot authenticate it. Existing
+        financial liabilities and durable work remain intact. Other sessions use the explicit account security workflow.
+      responses:
+        '204':
+          description: Current bearer/device session revoked durably. No response body or operation polling is required.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /profile:
+    get:
+      operationId: getConsumerProfile
+      summary: Read the authenticated consumer profile
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+    patch:
+      operationId: updateConsumerProfile
+      summary: Update permitted consumer preferences
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+  /identity/uploads:
+    post:
+      operationId: createProtectedEvidenceUpload
+      summary: Request a protected owned evidence upload
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityUploadHandoff'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentityUploadRequest'
+  /enrollments:
+    post:
+      operationId: submitIdentityEnrollment
+      summary: Submit identity and screening evidence
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned. Submit owned identity/liveness/details evidence to the approved provider under current
+        consent and retention policy. Manual screening exceptions remain unresolved until review. No consumer-provided
+        approval bypasses KYC. Approved enrollment creates wallet/card intent exactly once.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentRequest'
+  /enrollments/current:
+    get:
+      operationId: getCurrentIdentityEnrollment
+      summary: Read own identity and remediation state
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+  /enrollments/{enrollment_reference}/remediation:
+    post:
+      operationId: submitIdentityRemediation
+      summary: Submit supported identity remediation or reverification
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned. Only an owned enrollment with an approved remediation/reverification path accepts new
+        verified evidence. Old evidence/history remains linked under retention policy; no repeated wallet/card creation.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/enrollment_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentRequest'
+  /devices:
+    get:
+      operationId: listConsumerDevices
+      summary: List owned registered devices
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    post:
+      operationId: enrollConsumerDevice
+      summary: Request verified device-key enrollment
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned. Authenticate consumer and required step-up; verify approved attestation/key-possession
+        evidence before active device state. Device references alone cannot bind a session.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceEnrollmentRequest'
+  /devices/{device_reference}/revoke:
+    post:
+      operationId: revokeConsumerDevice
+      summary: Revoke an owned device and bound sessions
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned. Required step-up and recovery controls apply. Revoke device keys/sessions/evidence without
+        discarding financial liabilities or durable work.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/device_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /step-up/challenges:
+    post:
+      operationId: createStepUpChallenge
+      summary: Request action-bound step-up
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StepUpChallengeRequest'
+  /step-up/verifications:
+    post:
+      operationId: verifyStepUpChallenge
+      summary: Complete action-bound step-up
+      tags:
+      - Identity
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpEvidence'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeProof'
+  /consents:
+    get:
+      operationId: listConsumerConsents
+      summary: List owned partner consent history
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentPage'
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+  /consents/{consent_reference}:
+    get:
+      operationId: getConsumerConsent
+      summary: Read an owned partner consent
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
+        and current eligibility apply.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Owned resource or result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Consent'
+      parameters:
+      - $ref: '#/components/parameters/consent_reference'
+  /consents/{consent_reference}/revoke:
+    post:
+      operationId: revokeConsumerConsent
+      summary: Revoke partner consent and future access
+      tags:
+      - Connections
+      x-implementation-status: planned
+      description: Planned. Immediately block future partner access/redemption and revoke the linked connection
+        through the approved adapter. Retain required financial evidence and continue already-committed completion/recovery;
+        token disposal follows approved retention.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '202':
+          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
+            Poll the returned owned operation; do not blindly resend.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionOperation'
+          headers:
+            Location:
+              description: Owned operation or resource status URI under /api/v2.
+              schema:
+                type: string
+                format: uri-reference
+      parameters:
+      - $ref: '#/components/parameters/consent_reference'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/StepUp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyActionRequest'
+  /foundation/callbacks/{source}:
+    post:
+      operationId: acceptFoundationCallback
+      summary: Persist a verified development callback
+      tags:
+      - Foundation callbacks
+      x-implementation-status: implemented-local-testing-only
+      description: Implemented simulator protocol only in APP_ENV local/testing with callbacks enabled and a configured
+        simulator source/key. Admission is disabled by default. Verify lowercase HMAC-SHA256(timestamp + "." + exact
+        request bytes), key at least 32 bytes, timestamp skew within configured bound (current default 300 seconds),
+        and body bytes within configured limit (current default 16384). Configuration errors fail closed. No real
+        partner protocol or economic capability is certified. Duplicate callback identity remains durable; a fresh
+        signature/timestamp is required on every delivery. Processing and recovery continue independently of new-admission
+        flags.
+      security:
+      - CallbackSignature: []
+      parameters:
+      - name: source
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z0-9-]{1,64}$(?![\s\S])
+      - name: X-Callback-Timestamp
+        in: header
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{1,11}$(?![\s\S])
+        description: Unix seconds as decimal ASCII, signed with the exact body.
+      - name: X-Callback-Signature
+        in: header
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-f0-9]{64}$(?![\s\S])
+        description: Lowercase hexadecimal HMAC-SHA256 of timestamp, period and exact body. Key remains in protected
+          runtime configuration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallbackBody'
+            example:
+              event_id: event-123
+              operation_reference: operation-456
+              status: pending
+              occurred_at: '2026-10-26T10:00:00Z'
+      responses:
+        '202':
+          description: Encrypted normalized event persisted durably. Dispatch/worker/notification success is not
+            required to acknowledge receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallbackReceipt'
+        '401':
+          description: Invalid signature/key/timestamp/size. No event persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallbackError'
+        '409':
+          description: Case-sensitive source/event identity already has a different canonical payload. Original
+            retained and conflict audited.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallbackError'
+        '422':
+          description: Authenticated JSON fails strict schema/calendar validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallbackError'
+        '429':
+          description: Implemented throttle:60,1 middleware rejects excess requests; a deployment may apply stricter
+            network limits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkRateLimitError'
+        '503':
+          description: Admission disabled, unsupported source/environment, or invalid foundation configuration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallbackError'
+components:
+  securitySchemes:
+    ConsumerBearer:
+      type: http
+      scheme: bearer
+      description: Existing Sanctum-compatible bearer identity boundary. Planned consumer routes derive user identity
+        from the authenticated principal and verify device/session/eligibility and any required step-up. Token possession
+        never bypasses object ownership.
+    CallbackSignature:
+      type: apiKey
+      in: header
+      name: X-Callback-Signature
+      description: Development HMAC protocol, with required signed X-Callback-Timestamp. Not a reusable static API
+        key and not a consumer token.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: ^[A-Za-z0-9_.:-]{8,128}$(?![\s\S])
+      description: Stable key scoped to the authenticated consumer and operation kind. Same key and canonical request
+        returns the original reference/result, including pending/unknown. Changed request returns 409. Never use
+        a fresh key to bypass an unresolved external outcome.
+    StepUp:
+      name: X-Step-Up-Reference
+      in: header
+      required: false
+      schema:
+        $ref: '#/components/schemas/Reference'
+      description: Reference to completed server-verified evidence bound to this consumer, device/session and action.
+        Required when current policy demands step-up; the header alone grants no authority.
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema: &id002
+        type: string
+      description: Opaque server-issued page cursor.
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+      description: Requested page size, bounded by approved server configuration.
+    From:
+      name: from
+      in: query
+      required: false
+      schema: &id001
+        type: string
+        format: date-time
+      description: Inclusive start of the filter interval.
+    Until:
+      name: until
+      in: query
+      required: false
+      schema: *id001
+      description: Exclusive end after from.
+    PartnerFilter:
+      name: partner_reference
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Reference'
+      description: Owned partner connection/provenance filter; does not expand authorization.
+    connection_reference:
+      name: connection_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    quote_reference:
+      name: quote_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    redemption_reference:
+      name: redemption_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    card_reference:
+      name: card_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    case_reference:
+      name: case_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    dispute_reference:
+      name: dispute_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    operation_reference:
+      name: operation_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    enrollment_reference:
+      name: enrollment_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    device_reference:
+      name: device_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+    consent_reference:
+      name: consent_reference
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceReference'
+  schemas:
+    Reference:
+      type: string
+      minLength: 1
+      maxLength: 180
+      pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]*$(?![\s\S])
+      description: Opaque, case-sensitive reference. The backend verifies authenticated ownership. Reference knowledge
+        does not grant access.
+    DecimalAmount:
+      type: string
+      pattern: ^[0-9]+(?:\.[0-9]+)?$(?![\s\S])
+      description: Exact non-negative plain decimal. Preserve supplied spelling and precision. No exponent, float,
+        inferred rate, rounding or FX.
+    PositiveDecimalAmount:
+      allOf:
+      - $ref: '#/components/schemas/DecimalAmount'
+      - not:
+          pattern: ^0+(?:\.0+)?$(?![\s\S])
+      description: A nonzero exact decimal. Further execution minimums depend on approved policy.
+    Currency:
+      type: string
+      pattern: ^[A-Z]{3}$(?![\s\S])
+      description: Supplied uppercase currency code. Syntax does not establish an approved wallet currency. Incompatible
+        currencies block execution; no automatic FX.
+    Money:
+      type: object
+      additionalProperties: false
+      properties:
+        amount:
+          $ref: '#/components/schemas/DecimalAmount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+      required:
+      - amount
+      - currency
+    PositiveMoney:
+      type: object
+      additionalProperties: false
+      properties:
+        amount:
+          $ref: '#/components/schemas/PositiveDecimalAmount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+      required:
+      - amount
+      - currency
+    Points:
+      type: integer
+      format: int64
+      minimum: 1
+      description: Positive whole points. Partner/business limits are checked independently. Clients preserve exact
+        integer values.
+    Digest:
+      type: string
+      pattern: ^[a-f0-9]{64}$(?![\s\S])
+      description: SHA-256 of the server canonical immutable terms. Clients echo the digest; the backend loads and
+        compares its own stored terms.
+    StepUpRequirement:
+      type: object
+      additionalProperties: false
+      properties:
+        required: &id003
+          type: boolean
+        actions:
+          type: array
+          items: *id002
+        challenge_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+      required:
+      - required
+      - actions
+      description: Server-selected step-up requirements. A challenge reference is not proof of success; the backend
+        checks completed identity/session-bound evidence.
+    Eligibility:
+      type: object
+      additionalProperties: false
+      properties:
+        kyc_state:
+          type: string
+          enum:
+          - not_started
+          - pending
+          - under_review
+          - verified
+          - rejected
+          - reverification_required
+        account_restricted: *id003
+        allowed_actions:
+          type: array
+          items: *id002
+        reason_codes:
+          type: array
+          items: *id002
+        step_up:
+          $ref: '#/components/schemas/StepUpRequirement'
+        policy_version:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - kyc_state
+      - account_restricted
+      - allowed_actions
+      - reason_codes
+      - step_up
+      - policy_version
+      description: Current server decision for the authenticated consumer. This resource cannot grant eligibility
+        and is rechecked at every mutation.
+    Partner:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        display_name: *id002
+        integration_mode:
+          type: string
+          enum:
+          - oauth_api
+          - bilateral_api
+          - batch_file
+          - credential_vault
+        availability:
+          type: string
+          enum:
+          - available
+          - degraded
+          - unavailable
+          - view_only
+        supported_operations:
+          type: array
+          items:
+            type: string
+            enum:
+            - authorize
+            - revoke
+            - read_balance
+            - request_offer
+            - confirm_terms
+            - reserve
+            - confirm_debit
+            - release
+            - reverse
+            - operation_status
+        guaranteed_reversal_verified: *id003
+        redemption_enabled: *id003
+      required:
+      - reference
+      - display_name
+      - integration_mode
+      - availability
+      - supported_operations
+      - guaranteed_reversal_verified
+      - redemption_enabled
+      description: Catalogue fields reveal capabilities, not endpoints or credentials. Batch/vault use requires
+        its release decision; read access never implies permitted debit.
+    Consent:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        partner_reference:
+          $ref: '#/components/schemas/Reference'
+        connection_reference:
+          $ref: '#/components/schemas/Reference'
+        scopes:
+          type: array
+          items: *id002
+          minItems: 1
+        disclosure_version:
+          $ref: '#/components/schemas/Reference'
+        granted_at: *id001
+        revoked_at:
+          anyOf:
+          - *id001
+          - type: 'null'
+      required:
+      - reference
+      - partner_reference
+      - connection_reference
+      - scopes
+      - disclosure_version
+      - granted_at
+      - revoked_at
+    BalanceSnapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        points:
+          type: integer
+          format: int64
+          minimum: 0
+        supplied_value:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        source:
+          $ref: '#/components/schemas/Reference'
+        observed_at: *id001
+        partner_quote_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        partner_transaction_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        valid_from:
+          anyOf:
+          - *id001
+          - type: 'null'
+        valid_until:
+          anyOf:
+          - *id001
+          - type: 'null'
+        freshness:
+          type: string
+          enum:
+          - current
+          - stale
+          - offline
+        expiry_buckets:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              points:
+                type: integer
+                format: int64
+                minimum: 0
+              expires_at: *id001
+            required:
+            - points
+            - expires_at
+      required:
+      - points
+      - supplied_value
+      - source
+      - observed_at
+      - freshness
+      description: A successful zero balance is distinct from a failed refresh. Null supplied_value means value
+        unavailable, with no derived estimate. Retain optional references/validity only where supplied. This snapshot
+        is not executable approval.
+    Connection:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        partner_reference:
+          $ref: '#/components/schemas/Reference'
+        state:
+          type: string
+          enum:
+          - pending_authorization
+          - connected
+          - reauthorization_required
+          - degraded
+          - revoked
+        masked_membership:
+          anyOf:
+          - *id002
+          - type: 'null'
+        consent:
+          anyOf:
+          - $ref: '#/components/schemas/Consent'
+          - type: 'null'
+        last_successful_snapshot:
+          anyOf:
+          - $ref: '#/components/schemas/BalanceSnapshot'
+          - type: 'null'
+        last_refresh_error_code:
+          anyOf:
+          - *id002
+          - type: 'null'
+        last_refresh_attempt_at:
+          anyOf:
+          - *id001
+          - type: 'null'
+        redemption_enabled: *id003
+      required:
+      - reference
+      - partner_reference
+      - state
+      - last_successful_snapshot
+      - redemption_enabled
+      description: Returns only the authenticated consumer's connection. Refresh failure retains the last successful
+        snapshot; tokens and unmasked account identifiers are excluded.
+    ConnectRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        partner_reference:
+          $ref: '#/components/schemas/Reference'
+        consent_scopes:
+          type: array
+          items: *id002
+          minItems: 1
+          uniqueItems: true
+        disclosure_version:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - partner_reference
+      - consent_scopes
+      - disclosure_version
+      description: The server validates consent against the approved partner disclosure and initiates partner-hosted
+        authorization. Raw partner credentials, actor ID, KYC state and account ownership assertions are prohibited.
+    AuthorizationHandoff:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        partner_hosted_url:
+          type: string
+          format: uri
+        state:
+          type: string
+          minLength: 1
+        expires_at: *id001
+      required:
+      - reference
+      - partner_hosted_url
+      - state
+      - expires_at
+      description: Short-lived server-allowlisted partner handoff. The backend verifies callback state, authenticated
+        source and account ownership before connection activation. It does not accept consumer-supplied confirmed=true.
+    ConnectionOperation:
+      type: object
+      additionalProperties: false
+      properties:
+        operation:
+          $ref: '#/components/schemas/Operation'
+        connection:
+          $ref: '#/components/schemas/Connection'
+        authorization_handoff:
+          anyOf:
+          - $ref: '#/components/schemas/AuthorizationHandoff'
+          - type: 'null'
+      required:
+      - operation
+      - connection
+    RefreshAllRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        connection_references:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reference'
+          minItems: 1
+          uniqueItems: true
+      description: Omitted connection_references means all of this consumer's eligible connections. Per-partner
+        limits and consent still apply.
+    PartnerConfirmation:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        confirmed_at: *id001
+        valid_until:
+          anyOf:
+          - *id001
+          - type: 'null'
+      required:
+      - reference
+      - confirmed_at
+      description: Authoritative evidence supplied by an authenticated point-owner adapter. It is neither consumer
+        input nor cash-backing evidence. A future/expired confirmation cannot authorize commitment.
+    PartnerOffer:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        connection_reference:
+          $ref: '#/components/schemas/Reference'
+        points:
+          $ref: '#/components/schemas/Points'
+        supplied_value:
+          $ref: '#/components/schemas/Money'
+        source:
+          $ref: '#/components/schemas/Reference'
+        observed_at: *id001
+        partner_quote_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        partner_transaction_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        valid_from:
+          anyOf:
+          - *id001
+          - type: 'null'
+        valid_until:
+          anyOf:
+          - *id001
+          - type: 'null'
+        confirmation:
+          $ref: '#/components/schemas/PartnerConfirmation'
+      required:
+      - reference
+      - connection_reference
+      - points
+      - supplied_value
+      - source
+      - observed_at
+      - confirmation
+      description: Immutable supplied terms and authoritative adapter evidence. Preserve exact non-negative supplied
+        amount, source, references and validity where supplied. Zero remains observed data, but cannot make a quote
+        executable or pass approval/readiness. Missing, zero, future, expired or unconfirmed value blocks commitment.
+        No partner conversion rules or invented TTL.
+    PointSelection:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          reference:
+            $ref: '#/components/schemas/Reference'
+          points:
+            $ref: '#/components/schemas/Points'
+        required:
+        - reference
+        - points
+      - type: object
+        additionalProperties: false
+        properties:
+          reference:
+            $ref: '#/components/schemas/Reference'
+          all_available:
+            type: boolean
+            const: true
+        required:
+        - reference
+        - all_available
+      description: Select explicit points or all available for one owned connection. Any reduction due to limits/capacity
+        is disclosed in a new quote before approval.
+    QuoteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/PointSelection'
+          minItems: 1
+      required:
+      - connections
+      description: Each connection appears at most once. Multi-partner redemption is required. Current KYC, consent,
+        balances, partner constraints, limits and wallet capacity apply. No amount, conversion rate, fee override
+        or currency-conversion request is accepted.
+    RuleVersions:
+      type: object
+      additionalProperties: false
+      properties:
+        platform_share:
+          $ref: '#/components/schemas/Reference'
+        merchant_revenue_share:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        rounding_policy:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - platform_share
+      - merchant_revenue_share
+      - rounding_policy
+      description: Immutable approved commercial and rounding versions. A null incentive version means disabled.
+        Changing fees, wallet credit or accepted versions requires a new quote and approval.
+    DisclosedFee:
+      type: object
+      additionalProperties: false
+      properties:
+        code: *id002
+        description: *id002
+        amount:
+          $ref: '#/components/schemas/Money'
+        bearer:
+          type: string
+          enum:
+          - consumer
+          - partner
+      required:
+      - code
+      - description
+      - amount
+      - bearer
+      description: Approved disclosed commercial charge. A per-point fee remains separate from point-owner valuation.
+    QuoteLeg:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        partner_reference:
+          $ref: '#/components/schemas/Reference'
+        offer:
+          $ref: '#/components/schemas/PartnerOffer'
+        commercial_rule_versions:
+          $ref: '#/components/schemas/RuleVersions'
+        fee_bearer_model:
+          type: string
+          enum:
+          - deducted_from_supplied_value
+          - billed_separately_to_partner
+        disclosed_fees:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisclosedFee'
+        wallet_credit:
+          $ref: '#/components/schemas/Money'
+      required:
+      - reference
+      - partner_reference
+      - offer
+      - commercial_rule_versions
+      - fee_bearer_model
+      - disclosed_fees
+      - wallet_credit
+    Quote:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        state:
+          type: string
+          enum:
+          - ready
+          - expired
+          - superseded
+        terms_digest:
+          $ref: '#/components/schemas/Digest'
+        created_at: *id001
+        expires_at: *id001
+        completion_window:
+          type: object
+          additionalProperties: false
+          properties:
+            earliest_at:
+              anyOf:
+              - *id001
+              - type: 'null'
+            latest_at:
+              anyOf:
+              - *id001
+              - type: 'null'
+            description: *id002
+          required:
+          - description
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteLeg'
+          minItems: 1
+        total_wallet_credit:
+          $ref: '#/components/schemas/Money'
+        consumer_fees:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisclosedFee'
+        step_up:
+          $ref: '#/components/schemas/StepUpRequirement'
+        superseded_by:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+      required:
+      - reference
+      - state
+      - terms_digest
+      - created_at
+      - expires_at
+      - completion_window
+      - legs
+      - total_wallet_credit
+      - consumer_fees
+      - step_up
+      description: Only a fully confirmed compatible-currency quote becomes ready. Expiry is server assigned under
+        approved configuration, with no default lifetime in this contract. Every amount/reference/rule is immutable.
+        A changed offer, including an increase, creates a superseding quote and renewed approval. Pending quote
+        preparation returns Operation instead.
+      allOf:
+      - if:
+          properties:
+            state:
+              const: ready
+          required:
+          - state
+        then:
+          properties:
+            legs:
+              items:
+                properties:
+                  offer:
+                    properties:
+                      supplied_value:
+                        $ref: '#/components/schemas/PositiveMoney'
+    QuoteApprovalRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        terms_digest:
+          $ref: '#/components/schemas/Digest'
+      required:
+      - terms_digest
+      description: Explicit acceptance of the currently displayed owned quote. The server loads the immutable quote
+        and validates its digest, eligibility, consent, validity, commercial versions and required step-up. It cannot
+        accept terms supplied by the client.
+    QuoteApproval:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        quote_reference:
+          $ref: '#/components/schemas/Reference'
+        terms_digest:
+          $ref: '#/components/schemas/Digest'
+        approved_at: *id001
+      required:
+      - reference
+      - quote_reference
+      - terms_digest
+      - approved_at
+      description: Immutable consumer approval bound to this authenticated user, quote, partner/account sources,
+        quantities, supplied money/currency, references, validity, fees, credit and commercial versions. Superseded/expired
+        terms cannot reuse it.
+    RedemptionConfirmRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        quote_reference:
+          $ref: '#/components/schemas/Reference'
+        approval_reference:
+          $ref: '#/components/schemas/Reference'
+        terms_digest:
+          $ref: '#/components/schemas/Digest'
+      required:
+      - quote_reference
+      - approval_reference
+      - terms_digest
+      description: Rechecks current eligibility, ownership, consent, limits/capacity, fresh authoritative accepted
+        partner terms and approved funding before commitment. No client amount, balance, conversion, funding assertion
+        or confirmed flag is accepted.
+    RedemptionLeg:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        partner_reference:
+          $ref: '#/components/schemas/Reference'
+        connection_reference:
+          $ref: '#/components/schemas/Reference'
+        accepted_offer:
+          $ref: '#/components/schemas/PartnerOffer'
+        state:
+          type: string
+          enum:
+          - pending
+          - reserved
+          - debit_pending
+          - confirmed
+          - reversal_pending
+          - reversed
+          - failed
+          - unknown
+        partner_operation_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        wallet_credit:
+          $ref: '#/components/schemas/Money'
+        commercial_rule_versions:
+          $ref: '#/components/schemas/RuleVersions'
+      required:
+      - reference
+      - partner_reference
+      - connection_reference
+      - accepted_offer
+      - state
+      - wallet_credit
+      - commercial_rule_versions
+      description: Partner legs remain linked through compensation. Unknown outcomes require status recovery before
+        retry; a timeout never proves no debit.
+    Redemption:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        quote_reference:
+          $ref: '#/components/schemas/Reference'
+        approval_reference:
+          $ref: '#/components/schemas/Reference'
+        state:
+          type: string
+          enum:
+          - pending
+          - processing
+          - awaiting_partner
+          - recovery_pending
+          - completed
+          - failed
+        created_at: *id001
+        updated_at: *id001
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedemptionLeg'
+          minItems: 1
+        wallet_credit:
+          $ref: '#/components/schemas/Money'
+        posted_statement_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        case_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        next_action: *id002
+      required:
+      - reference
+      - quote_reference
+      - approval_reference
+      - state
+      - created_at
+      - updated_at
+      - legs
+      - wallet_credit
+      - posted_statement_reference
+      - case_reference
+      - next_action
+      description: Completed means every leg, funding and balanced ledger posting is confirmed. Pending/recovery
+        amounts are not spendable. Multi-partner credit is all-or-nothing under the FDD baseline. Failed means no
+        debit or confirmed complete compensation. Point-funding settlement and partner incentive remain separate
+        obligations.
+    Operation:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        kind: *id002
+        state:
+          type: string
+          enum:
+          - accepted
+          - processing
+          - awaiting_external
+          - unknown
+          - completed
+          - failed
+        resource_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        created_at: *id001
+        updated_at: *id001
+        next_action: *id002
+        case_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+      required:
+      - reference
+      - kind
+      - state
+      - resource_reference
+      - created_at
+      - updated_at
+      - next_action
+      description: Owned asynchronous operation. Unknown is not failed and prohibits blind resend. Stable keys return
+        this original operation. Completion of a handoff/delivery is not financial settlement. This planned consumer
+        resource is distinct from the implemented internal FoundationOperation projection.
+    Wallet:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        status:
+          type: string
+          enum:
+          - pending_activation
+          - active
+          - restricted
+        posted_balance:
+          $ref: '#/components/schemas/Money'
+        authorization_holds:
+          $ref: '#/components/schemas/Money'
+        restricted_amount:
+          $ref: '#/components/schemas/Money'
+        available_to_spend:
+          $ref: '#/components/schemas/Money'
+        pending_redemption:
+          $ref: '#/components/schemas/Money'
+        as_of: *id001
+        funding_policy_version:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - reference
+      - currency
+      - status
+      - posted_balance
+      - authorization_holds
+      - restricted_amount
+      - available_to_spend
+      - pending_redemption
+      - as_of
+      - funding_policy_version
+      description: One owned wallet in its approved currency. Pending credits, holds and restrictions are separate.
+        Available value follows approved issuer/funding controls; points confirmation does not establish cash backing.
+        No cash deposits, P2P transfer or FX endpoint exists.
+    FundingProvenance:
+      type: object
+      additionalProperties: false
+      properties:
+        partner_reference:
+          $ref: '#/components/schemas/Reference'
+        redemption_reference:
+          $ref: '#/components/schemas/Reference'
+        leg_reference:
+          $ref: '#/components/schemas/Reference'
+        amount:
+          $ref: '#/components/schemas/Money'
+      required:
+      - partner_reference
+      - redemption_reference
+      - leg_reference
+      - amount
+      description: Transparency link to the originating redemption. It does not create separate spendable partner
+        sub-wallets.
+    StatementEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        financial_reference:
+          $ref: '#/components/schemas/Reference'
+        posted_at: *id001
+        type:
+          type: string
+          enum:
+          - redemption_credit
+          - card_capture
+          - card_refund
+          - disclosed_fee
+          - reversal
+          - adjustment
+        direction:
+          type: string
+          enum:
+          - credit
+          - debit
+        amount:
+          $ref: '#/components/schemas/Money'
+        description: *id002
+        original_entry_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        redemption_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        card_transaction_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        funding_provenance:
+          type: array
+          items:
+            $ref: '#/components/schemas/FundingProvenance'
+      required:
+      - reference
+      - financial_reference
+      - posted_at
+      - type
+      - direction
+      - amount
+      - description
+      - funding_provenance
+      description: Confirmed append-only financial history. Corrections reference the original entry. Authorizations
+        are holds, not a second posted debit. Exact decimal API amounts derive from approved minor-unit accounting,
+        without choosing currency scale here.
+    Card:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        wallet_reference:
+          $ref: '#/components/schemas/Reference'
+        last_four:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{4}$(?![\s\S])
+          - type: 'null'
+        state:
+          type: string
+          enum:
+          - issuance_pending
+          - active
+          - freeze_pending
+          - frozen
+          - close_pending
+          - closed
+          - issuance_failed
+        pending_operation_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        replaced_card_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        device_wallets:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              wallet:
+                type: string
+                enum:
+                - apple_pay
+                - google_pay
+              state:
+                type: string
+                enum:
+                - pending
+                - active
+                - suspended
+                - removed
+                - failed
+              operation_reference:
+                anyOf:
+                - $ref: '#/components/schemas/Reference'
+                - type: 'null'
+            required:
+            - wallet
+            - state
+      required:
+      - reference
+      - wallet_reference
+      - last_four
+      - state
+      - pending_operation_reference
+      - device_wallets
+      description: Tokenized references only. PAN/CVV, full card details and raw issuer credentials never enter
+        this response, persistence, logs or back-office views. Final state follows issuer confirmation, including
+        uncertain freeze/close.
+    EmptyActionRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+      description: The server derives the authenticated actor and owned target from the route/session. No client
+        identity, eligibility, confirmation or financial state is accepted. Current action eligibility and required
+        step-up apply.
+    CardIssueRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+      description: Resumes the one idempotent virtual-card issuance intent created by approved enrollment. It does
+        not authorize arbitrary extra cards or duplicate wallets. Empty wallets do not alone block approved issuance.
+    CardRevealHandoff:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        issuer_hosted_url:
+          type: string
+          format: uri
+        expires_at: *id001
+      required:
+      - reference
+      - issuer_hosted_url
+      - expires_at
+      description: Short-lived, user/device/session-bound issuer-hosted reveal after server-verified step-up. The
+        URL is allowlisted and treated as sensitive transient data; no PAN or CVV is returned by Pull2Spend.
+    DeviceWalletRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        wallet:
+          type: string
+          enum:
+          - apple_pay
+          - google_pay
+        device_reference:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - wallet
+      - device_reference
+      description: The backend verifies device ownership and issuer/country/network eligibility. This API does not
+        assert Apple Pay/Google Pay certification.
+    DeviceWalletHandoff:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        wallet:
+          type: string
+          enum:
+          - apple_pay
+          - google_pay
+        issuer_handoff_reference:
+          $ref: '#/components/schemas/Reference'
+        expires_at: *id001
+      required:
+      - reference
+      - wallet
+      - issuer_handoff_reference
+      - expires_at
+      description: Opaque issuer tokenization/provisioning handoff. Sensitive issuer SDK payloads remain in its
+        approved secure channel.
+    CaseCreateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          enum:
+          - complaint
+          - redemption
+          - card
+          - connector
+          - security
+        linked_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        reason_code: *id002
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+      required:
+      - category
+      - reason_code
+      - message
+      description: Consumer-visible support content is protected. Server verifies ownership of every linked resource
+        and stores sensitive message content outside append-only audit. Staff ownership, SLA and resolution fields
+        are prohibited.
+    Case:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        category: *id002
+        state:
+          type: string
+          enum:
+          - open
+          - assigned
+          - in_progress
+          - awaiting_external
+          - resolved
+          - closed
+        linked_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        created_at: *id001
+        updated_at: *id001
+        next_action: *id002
+        consumer_message:
+          anyOf:
+          - *id002
+          - type: 'null'
+        resolution_summary:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - reference
+      - category
+      - state
+      - created_at
+      - updated_at
+      - next_action
+      description: Only the consumer-safe view of their own case. Internal notes, staff identifiers, screening details,
+        partner secrets and privileged evidence are excluded.
+    DisputeCreateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        card_reference:
+          $ref: '#/components/schemas/Reference'
+        transaction_reference:
+          $ref: '#/components/schemas/Reference'
+        reason_code: *id002
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        evidence_references:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reference'
+      required:
+      - card_reference
+      - transaction_reference
+      - reason_code
+      - message
+      description: The consumer owns the card, transaction and each evidence upload. Evidence references point to
+        protected separately validated artifacts. A dispute request does not itself post a provisional or final
+        refund.
+    Dispute:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        case_reference:
+          $ref: '#/components/schemas/Reference'
+        card_reference:
+          $ref: '#/components/schemas/Reference'
+        transaction_reference:
+          $ref: '#/components/schemas/Reference'
+        state:
+          type: string
+          enum:
+          - submitted
+          - under_review
+          - awaiting_external
+          - resolved
+          - closed
+        created_at: *id001
+        updated_at: *id001
+        next_action: *id002
+      required:
+      - reference
+      - case_reference
+      - card_reference
+      - transaction_reference
+      - state
+      - created_at
+      - updated_at
+      - next_action
+      description: Issuer-linked consumer case. Only confirmed issuer financial outcomes post ledger entries under
+        approved policy. Resolution is distinct from financial adjustment.
+    SafeError:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              enum:
+              - unauthenticated
+              - contact_unverified
+              - challenge_invalid
+              - challenge_expired
+              - challenge_replayed
+              - challenge_attempts_exceeded
+              - device_untrusted
+              - session_locked
+              - consent_required
+              - consent_version_changed
+              - screening_review_required
+              - identity_evidence_invalid
+              - provider_unavailable
+              - forbidden
+              - not_found
+              - validation_failed
+              - kyc_required
+              - eligibility_required
+              - account_restricted
+              - step_up_required
+              - connection_revoked
+              - connection_unavailable
+              - stale_balance
+              - insufficient_points
+              - insufficient_funds
+              - value_unavailable
+              - quote_expired
+              - offer_expired
+              - offer_unconfirmed
+              - value_changed_reapproval_required
+              - currency_policy_required
+              - currency_mismatch
+              - limit_exceeded
+              - wallet_capacity_exceeded
+              - idempotency_conflict
+              - partner_unavailable
+              - issuer_unavailable
+              - funding_unconfirmed
+              - commercial_policy_unapproved
+              - operation_pending
+              - outcome_unknown
+              - capability_disabled
+              - unsupported_integration_operation
+              - rate_limited
+            reference:
+              anyOf:
+              - $ref: '#/components/schemas/Reference'
+              - type: 'null'
+            next_action: *id002
+            field_errors:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  field: *id002
+                  code: *id002
+                required:
+                - field
+                - code
+          required:
+          - code
+          - next_action
+      required:
+      - error
+      description: Fixed safe codes and next action only. No credentials, raw partner exceptions, PAN/CVV, identity
+        payloads, policy internals or input values. Foreign-resource lookups return the same not_found as missing
+        references.
+    CallbackBody:
+      type: object
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          pattern: ^[A-Za-z0-9_.:-]{1,128}$(?![\s\S])
+        operation_reference:
+          type: string
+          pattern: ^[A-Za-z0-9_.:-]{1,128}$(?![\s\S])
+        status:
+          type: string
+          enum:
+          - pending
+          - unknown
+          - succeeded
+          - failed
+          - reversed
+        occurred_at:
+          type: string
+          format: date-time
+          pattern: ^(?!0000)\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$(?![\s\S])
+      required:
+      - event_id
+      - operation_reference
+      - status
+      - occurred_at
+      description: Exact implemented simulator schema. No extra keys. The backend also rejects invalid dates and
+        timestamps beyond its configured future-skew bound.
+    CallbackReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: accepted
+      required:
+      - reference
+      - status
+      description: Durably persisted event receipt, not economic completion. Identical source/event identity and
+        canonical payload return the original reference; changed payload returns 409.
+    CallbackError:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              enum:
+              - callback_rejected
+              - invalid_callback
+              - idempotency_conflict
+              - capability_disabled
+              - callback_source_unavailable
+              - foundation_configuration_invalid
+            next_action: *id002
+          required:
+          - code
+          - next_action
+      required:
+      - error
+    FrameworkRateLimitError:
+      type: object
+      properties:
+        message: *id002
+      required:
+      - message
+      additionalProperties: true
+      description: The implemented Laravel throttle middleware returns its standard safe JSON message and rate-limit
+        headers.
+    PartnerPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Partner'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+      description: Stable cursor order; the server scopes records before pagination. Page size is policy/configuration,
+        with no fixed default in this contract.
+    ConnectionPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Connection'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+      description: Stable cursor order; the server scopes records before pagination. Page size is policy/configuration,
+        with no fixed default in this contract.
+    RedemptionPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Redemption'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+      description: Stable cursor order; the server scopes records before pagination. Page size is policy/configuration,
+        with no fixed default in this contract.
+    StatementPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementEntry'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+      description: Stable cursor order; the server scopes records before pagination. Page size is policy/configuration,
+        with no fixed default in this contract.
+    CardPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Card'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+      description: Stable cursor order; the server scopes records before pagination. Page size is policy/configuration,
+        with no fixed default in this contract.
+    CasePage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Case'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+      description: Stable cursor order; the server scopes records before pagination. Page size is policy/configuration,
+        with no fixed default in this contract.
+    RefreshBatch:
+      type: object
+      additionalProperties: false
+      properties:
+        operation:
+          $ref: '#/components/schemas/Operation'
+        connections:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              connection_reference:
+                $ref: '#/components/schemas/Reference'
+              operation_reference:
+                $ref: '#/components/schemas/Reference'
+            required:
+            - connection_reference
+            - operation_reference
+      required:
+      - operation
+      - connections
+      description: Isolated child refresh operations. One partner failure does not erase other snapshots or produce
+        zero balances.
+    ResourceReference:
+      type: string
+      minLength: 1
+      maxLength: 180
+      pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\s\S])
+      description: Opaque case-sensitive URI path reference. Source/account evidence containing slash remains an
+        ordinary Reference in JSON, not a resource path segment.
+    ContactInput:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          email:
+            type: string
+            format: email
+        required:
+        - email
+      - type: object
+        additionalProperties: false
+        properties:
+          mobile:
+            type: string
+            pattern: ^\+[1-9][0-9]{1,14}$(?![\s\S])
+        required:
+        - mobile
+      description: One contact identifier for this challenge. The backend normalizes it and uses uniform responses
+        to prevent account enumeration.
+    RegistrationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        contact:
+          $ref: '#/components/schemas/ContactInput'
+        display_name:
+          type: string
+          minLength: 1
+        terms_version:
+          $ref: '#/components/schemas/Reference'
+        privacy_notice_version:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - contact
+      - display_name
+      - terms_version
+      - privacy_notice_version
+      description: Creates a contact-verification intent under approved notice versions. It does not grant KYC or
+        financial eligibility. Request/attempt limits are configured, with no policy threshold fixed here.
+    Challenge:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        purpose:
+          type: string
+          enum:
+          - contact_verification
+          - login
+          - step_up
+          - device_enrollment
+        methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - verified_channel_otp
+            - password
+            - pin
+            - device_signature
+          minItems: 1
+        expires_at: *id001
+        next_action: *id002
+      required:
+      - reference
+      - purpose
+      - methods
+      - expires_at
+      - next_action
+      description: Purpose-bound, server-selected, expiring single-use challenge. Exact lifetimes/attempt controls
+        follow approved policy. Response never reveals OTP, secret, full destination or whether an account exists.
+    ChallengeProof:
+      type: object
+      additionalProperties: false
+      properties:
+        challenge_reference:
+          $ref: '#/components/schemas/Reference'
+        method:
+          type: string
+          enum:
+          - verified_channel_otp
+          - password
+          - pin
+          - device_signature
+        proof:
+          type: string
+          minLength: 1
+          writeOnly: true
+      required:
+      - challenge_reference
+      - method
+      - proof
+      description: The backend accepts only a method bound to the challenge and verifies its protocol/proof against
+        server-held credentials. Device signature proof uses the registered key/attested protocol; biometrics unlock
+        that device key locally. No raw biometric template is sent or persisted. Challenge limits/purpose/expiry/replay
+        checks apply before session or evidence creation.
+    LoginChallengeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        contact:
+          $ref: '#/components/schemas/ContactInput'
+        device_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+      required:
+      - contact
+      description: Starts a uniform login challenge. New devices/locations require additional challenge only when
+        that optional requirement is enabled. Identity/device/session controls remain enforced regardless of user-supplied
+        references.
+    Session:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        access_token:
+          type: string
+          description: Sensitive bearer credential returned once over TLS. Never logged or stored in audit; the
+            client uses protected device storage.
+        token_type:
+          type: string
+          const: Bearer
+        expires_at:
+          anyOf:
+          - *id001
+          - type: 'null'
+        device_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        eligibility:
+          $ref: '#/components/schemas/Eligibility'
+      required:
+      - reference
+      - access_token
+      - token_type
+      - expires_at
+      - device_reference
+      - eligibility
+      description: Session creation follows verified contact and approved authentication. The token alone cannot
+        bypass resource ownership, device binding, KYC, suspension or required step-up.
+    ContactVerification:
+      type: object
+      additionalProperties: false
+      properties:
+        verified:
+          type: boolean
+          const: true
+        registration_reference:
+          $ref: '#/components/schemas/Reference'
+        next_action: *id002
+      required:
+      - verified
+      - registration_reference
+      - next_action
+      description: Contact verification is not identity/KYC approval and creates no wallet or card.
+    Profile:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        display_name: *id002
+        verified_contacts:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              kind:
+                type: string
+                enum:
+                - email
+                - mobile
+              masked_value: *id002
+              verified_at: *id001
+            required:
+            - kind
+            - masked_value
+            - verified_at
+        language: *id002
+        notification_preferences:
+          type: object
+          additionalProperties: false
+          properties:
+            security: *id003
+            redemption: *id003
+            card_transactions: *id003
+            point_expiry_reminders: *id003
+          required:
+          - security
+          - redemption
+          - card_transactions
+          - point_expiry_reminders
+        terms_version:
+          $ref: '#/components/schemas/Reference'
+        privacy_notice_version:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - reference
+      - display_name
+      - verified_contacts
+      - language
+      - notification_preferences
+      - terms_version
+      - privacy_notice_version
+      description: Only the authenticated consumer's profile. Essential notices follow approved policy; preferences
+        cannot suppress required financial/security obligations. Optional expiry reminders require actual supplied
+        expiry data.
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+        language: *id002
+        notification_preferences:
+          type: object
+          additionalProperties: false
+          properties:
+            security: *id003
+            redemption: *id003
+            card_transactions: *id003
+            point_expiry_reminders: *id003
+      description: No actor, role, KYC state, wallet balance or contact-verification flag can be changed here. Contact
+        changes require their own fresh purpose-bound verification and configured step-up.
+    IdentityUploadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+          - identity_document
+          - liveness_selfie
+          - support_evidence
+        media_type: *id002
+        size_bytes:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+      - kind
+      - media_type
+      - size_bytes
+      description: Server validates permitted evidence types, size policy and authenticated ownership before issuing
+        an allowlisted protected provider/storage handoff. Files require integrity/malware/provider verification
+        and never enter audit payloads.
+    IdentityUploadHandoff:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        upload_url:
+          type: string
+          format: uri
+        expires_at: *id001
+        required_headers:
+          type: object
+          additionalProperties:
+            type: string
+        completion_reference:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - reference
+      - upload_url
+      - expires_at
+      - required_headers
+      - completion_reference
+      description: Short-lived owned upload capability for approved protected storage/provider. Treat URL/headers
+        as sensitive transient data and never expose them in logs or back-office views. A successful upload alone
+        is not verified identity evidence.
+    EnrollmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        identity_document_reference:
+          $ref: '#/components/schemas/Reference'
+        liveness_evidence_reference:
+          $ref: '#/components/schemas/Reference'
+        identity_details_reference:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - identity_document_reference
+      - liveness_evidence_reference
+      - identity_details_reference
+      description: Owned protected provider evidence references, validated by the backend. identity_details_reference
+        identifies the approved provider-collected identity form. No client KYC decision, sanctions result, account
+        restriction or funding assertion is accepted.
+    Enrollment:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        state:
+          type: string
+          enum:
+          - not_started
+          - pending
+          - under_review
+          - verified
+          - rejected
+          - reverification_required
+        created_at: *id001
+        updated_at: *id001
+        verified_at:
+          anyOf:
+          - *id001
+          - type: 'null'
+        case_reference:
+          anyOf:
+          - $ref: '#/components/schemas/Reference'
+          - type: 'null'
+        remediation_codes:
+          type: array
+          items: *id002
+        next_action: *id002
+      required:
+      - reference
+      - state
+      - created_at
+      - updated_at
+      - verified_at
+      - case_reference
+      - remediation_codes
+      - next_action
+      description: Automated screening/document evidence does not bypass a required manual review. Only approved
+        enrollment creates one wallet and one stable virtual-card intent. Repeated callbacks/submissions never duplicate
+        them. Consumer response excludes screening matches and internal compliance notes.
+    DeviceEnrollmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        device_reference:
+          $ref: '#/components/schemas/Reference'
+        attestation_evidence_reference:
+          $ref: '#/components/schemas/Reference'
+        public_key_evidence_reference:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - device_reference
+      - attestation_evidence_reference
+      - public_key_evidence_reference
+      description: References identify owned evidence from an approved attestation/key-registration protocol. The
+        backend cryptographically verifies the protocol, challenge and key possession; opaque reference submission
+        alone grants no trust. Private keys, biometric templates and secrets are excluded.
+    Device:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        state:
+          type: string
+          enum:
+          - pending_verification
+          - active
+          - revoked
+        registered_at: *id001
+        last_verified_at:
+          anyOf:
+          - *id001
+          - type: 'null'
+        display_name: *id002
+      required:
+      - reference
+      - state
+      - registered_at
+      - last_verified_at
+      - display_name
+    DevicePage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+    ConsentPage:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Consent'
+        next_cursor:
+          anyOf:
+          - *id002
+          - type: 'null'
+      required:
+      - data
+      - next_cursor
+    StepUpChallengeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        action: *id002
+        resource_reference:
+          $ref: '#/components/schemas/Reference'
+        device_reference:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - action
+      - resource_reference
+      - device_reference
+      description: Action is allowlisted by server policy and bound to the owned resource and registered device/session.
+        High-value redemption, new connections and sensitive card actions follow configured requirements, with no
+        monetary threshold invented here.
+    StepUpEvidence:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        action: *id002
+        resource_reference:
+          $ref: '#/components/schemas/Reference'
+        device_reference:
+          $ref: '#/components/schemas/Reference'
+        verified_at: *id001
+        expires_at: *id001
+      required:
+      - reference
+      - action
+      - resource_reference
+      - device_reference
+      - verified_at
+      - expires_at
+      description: Server-issued completed evidence. Mutations recheck scope, action, session/device, expiry and
+        any single-use requirement. The client cannot mint evidence by changing a field.
+  responses:
+    Unauthenticated:
+      description: Authentication is missing, expired or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafeError'
+    Forbidden:
+      description: Current eligibility, account restrictions, consent or required step-up denies the action.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafeError'
+    NotFound:
+      description: Reference is missing or belongs to another consumer. These outcomes are indistinguishable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafeError'
+    Conflict:
+      description: Immutable terms, operation key, current state or unresolved external outcome conflicts. Renew
+        approval or query the original operation as indicated.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafeError'
+    ValidationError:
+      description: Request fails schema or approved partner/business constraints; no input values are echoed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafeError'
+    Unavailable:
+      description: A required capability, approved commercial/funding policy or external source is unavailable;
+        no financial success is inferred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafeError'
+    RateLimited:
+      description: Rate limit exceeded. Retry according to the server header; retain the original operation key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafeError'
+      headers:
+        Retry-After:
+          description: Server retry delay in seconds when supplied.
+          schema:
+            type: integer
+            minimum: 0
