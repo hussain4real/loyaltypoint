@@ -2,7 +2,7 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.4 |
+| Version | 0.5 |
 | Date | 26 October 2026 |
 | Status | Draft for delivery planning and business review |
 | Business owner | Bankole, as named in the BRD |
@@ -36,7 +36,7 @@
 
 This plan turns the FDD into a sequence of reviewable implementation phases. Every phase has a goal, dependencies, task checklist, deliverables, and measurable acceptance criteria. It covers the change from provider-to-provider point exchange to externally verified point redemption, a monetary wallet, virtual card spend, and auditable partner settlement.
 
-Phase 1 task and acceptance checkboxes record verified repository implementation and tests. Other phases remain unchecked. Phase 1 is in review until an accountable reviewer records phase acceptance. Checkbox changes are supported by code, independent engineering review and CI evidence, not by this document alone. No deployment or financial-service approval is implied.
+Phase 1 task and acceptance checkboxes record verified repository implementation and tests. Other phases remain unchecked. Phase 1 is complete following Erastus's acceptance, reported directly by the user on 26 October 2026. Checkbox changes are supported by code, independent engineering review and CI evidence, not by this document alone. No deployment or financial-service approval is implied.
 
 Use these rules throughout delivery:
 
@@ -61,6 +61,7 @@ Each applicable offer/snapshot/transaction retains the supplied points quantity,
 | 0.2 | 26 October 2026 | Confirm Pull2Spend branding, align to FDD v0.2 and record the BRS review feedback. Revise partner-value contracts, snapshots, quotes, commercial inputs, configuration, validation and acceptance without changing task IDs or completion status. |
 | 0.3 | 26 October 2026 | Record the user-directed hosting deferral, verify Phase 1 engineering tasks against implementation and CI, and retain accountable phase acceptance as a separate review outcome. |
 | 0.4 | 26 October 2026 | Record Erastus as the user-designated Phase 1 security/operations reviewer, the merge into dev and passing post-merge CI. Acceptance remains pending the recorded review outcome. |
+| 0.5 | 26 October 2026 | Record Erastus's acceptance as reported by the user and close Phase 1. Retain the hosting deferral, later business/operating gates, task IDs and other phases' status. |
 
 The illustrative partner response is **10,000 points with a supplied monetary value of QAR 350.00.** Under the deducted-fee example, platform share at 12% is QAR 42.00, wallet credit is QAR 308.00, partner incentive at 25% of platform share is QAR 10.50 and platform retained revenue is QAR 31.50. Point-funding settlement obligations remain separate from the incentive; the example does not approve a funding direction or amount. The partner-billed fee variant still credits QAR 350.00 where that agreed model applies.
 
@@ -179,7 +180,7 @@ On 26 October 2026, the user excluded hosting from the current phase because it 
 
 **Engineering evidence:** [Phase 1 foundations](PULL2SPEND_PHASE1_FOUNDATIONS.md), [merged PR #28](https://github.com/hussain4real/loyaltypoint/pull/28), and [post-merge CI run 40293078614](https://github.com/hussain4real/loyaltypoint/actions/runs/40293078614). Merge commit `d25c9ee08f012e43e41987a52b4124befbd1300a` is in `dev`. All four post-merge checks passed, including the 521-test suite with 1,677 assertions on SQLite and MySQL and a separate MySQL concurrent-worker test. Independent engineering review and the resolved PR findings support the checked items.
 
-**Accountable review:** On 26 October 2026, the user designated Erastus as the Phase 1 security/operations reviewer. Erastus's review outcome, evidence reference and decision date remain pending. The assignment does not record acceptance or authorize production. Hosting remains excluded under H-01. The review covers the current Phase 1 deliverables and P01-A01 through P01-A04 using the evidence above.
+**Accountable review:** Erastus is the user-designated Phase 1 security/operations reviewer. On 26 October 2026, the user directly reported his outcome as "accepted" in response to the Phase 1 review-outcome question. This chat response is the acceptance evidence; no separate reviewer attachment or decision date was supplied. Phase 1 is complete for P01-T01 through P01-T09 and P01-A01 through P01-A04. Hosting remains excluded under H-01. Later legal, funding, issuer, commercial and live operating decisions remain subject to their existing gates.
 
 **FDD alignment:** sections 4, 14-16; AC-22; platform portions of AC-09, AC-12 and AC-23.
 
@@ -547,7 +548,7 @@ The user deferred hosting on 26 October 2026. H-01 covers hosting selection, iso
 | Phase | Status | Completion/review evidence | Review date |
 | --- | --- | --- | --- |
 | 0 - Decisions and feasibility | Planned | Pending | Pending |
-| 1 - Foundations | In review | Merged into dev with passing post-merge CI. See [foundations evidence](PULL2SPEND_PHASE1_FOUNDATIONS.md). Erastus assigned to security/operations review on 26 October 2026; outcome pending. Hosting deferred to H-01 | Pending Erastus's outcome |
+| 1 - Foundations | Complete | Merged into dev with passing post-merge CI. See [foundations evidence](PULL2SPEND_PHASE1_FOUNDATIONS.md). Erastus: accepted, as directly reported by the user. Hosting deferred to H-01 | 26 October 2026 (user report date) |
 | 2 - Identity | Planned | Pending | Pending |
 | 3 - Connections | Planned | Pending | Pending |
 | 4 - Ledger and rules | Planned | Pending | Pending |
