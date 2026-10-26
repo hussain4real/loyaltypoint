@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\Provider;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Provider
+ * @mixin Provider
  */
 class ProviderResource extends JsonResource
 {
