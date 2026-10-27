@@ -2,11 +2,11 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.7 |
-| Date | 26 October 2026 |
-| Status | Draft for delivery planning and business review |
+| Version | 0.8 |
+| Date | 27 October 2026 |
+| Status | Draft for business review; in-house KYC approach accepted, protocol approval pending |
 | Business owner | Bankole, as named in the BRD |
-| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.3 |
+| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.4 |
 | Business source | [Pull2Spend BRD](Pull2Spend_BRD_2.docx), Draft v1.0 |
 | Business review copy | [FDD PDF](PULL2SPEND_FDD.pdf) |
 | Plan review copy | [Implementation plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
@@ -64,6 +64,7 @@ Each applicable offer/snapshot/transaction retains the supplied points quantity,
 | 0.5 | 26 October 2026 | Record Erastus's acceptance as reported by the user and close Phase 1. Retain the hosting deferral, later business/operating gates, task IDs and other phases' status. |
 | 0.6 | 26 October 2026 | Record ongoing Phase 2 backend/mobile implementation, its review procedure and the user's confirmation that verification services and policy are not selected. Keep all Phase 2 completion gates open. |
 | 0.7 | 26 October 2026 | Record the Phase 2 completion audit, passing identity/native CI and notification regressions. Mark Phase 2 blocked on unselected services, approved policy and remaining device/review evidence; preserve task IDs and unchecked completion gates. |
+| 0.8 | 27 October 2026 | Record the user's acceptance of in-house KYC as the operating approach. Require approval of the proposed checks, evidence sources and policy before implementing capture, internal decisions or an in-house adapter. Preserve task IDs and all Phase 2 completion gates. |
 
 The illustrative partner response is **10,000 points with a supplied monetary value of QAR 350.00.** Under the deducted-fee example, platform share at 12% is QAR 42.00, wallet credit is QAR 308.00, partner incentive at 25% of platform share is QAR 10.50 and platform retained revenue is QAR 31.50. Point-funding settlement obligations remain separate from the incentive; the example does not approve a funding direction or amount. The partner-billed fee variant still credits QAR 350.00 where that agreed model applies.
 
@@ -121,7 +122,7 @@ Establish an implementable business model and confirm the external capabilities 
 
 - [ ] P00-T01 Apply confirmed Pull2Spend naming (OD-01 resolved on 26 October 2026) and confirm launch market, operating currency and the release scope for every S/C requirement; record the remaining OD-03 and OD-05 decisions. Documentation of branding does not complete this task.
 - [ ] P00-T02 Confirm the licensing/program structure, legal issuer, safeguarding responsibilities, cash backing and float/prefunding arrangements; record OD-02.
-- [ ] P00-T03 Select candidate issuer/KYC services and 2-3 pilot Loyalty Partners; assign contacts, commercial owners and sandbox-access dependencies.
+- [ ] P00-T03 Select the candidate issuer and 2-3 pilot Loyalty Partners. For the accepted in-house KYC approach, confirm protocol/policy approvers and approved evidence sources; assign contacts, commercial owners and any external-source access dependencies.
 - [ ] P00-T04 Assess each pilot partner's ownership verification, balance read, supply of points quantity and monetary amount/currency, offer references/validity where supplied, authoritative confirmation, reserve/confirm, status query and guaranteed reversal capabilities; record OD-04 and OD-09. Do not require the partner's conversion principles.
 - [ ] P00-T05 Confirm issuer balance/hold authority, late capture, fees, refunds, disputes, device-wallet token lifecycle and Apple Pay/Google Pay launch-market eligibility; record OD-11 and OD-12.
 - [ ] P00-T06 Define partner fee bearer, funding direction, payout basis, revenue ceiling, approved overrides, tier method, rounding and any separately approved FX policy; record OD-06-OD-08 and OD-03. Use the partner-supplied monetary value for commercial calculations; no point-conversion rule is configured.
@@ -198,8 +199,8 @@ Allow consumers to register, verify identity and obtain controlled eligibility f
 
 - [ ] P02-T01 Implement registration, verified contact activation and purpose-bound, expiring, single-use OTP flows with request/attempt controls.
 - [ ] P02-T02 Implement device-bound biometric login, PIN/password fallback, session locking and approved step-up policies.
-- [ ] P02-T03 Integrate document authenticity, liveness and identity verification with the selected service.
-- [ ] P02-T04 Integrate sanctions/PEP/adverse-media screening and verified, deduplicated status callbacks.
+- [ ] P02-T03 After approval of the FDD section 6.1 checklist and required method/source fields, implement the BRD's automated ID-document authenticity check, liveness-checked selfie and identity verification through the in-house process. Capture and internal decision interfaces require that approval before implementation.
+- [ ] P02-T04 After approval, implement sanctions/PEP/adverse-media screening with approved sources, current search evidence and owned, versioned observations. Authenticate and deduplicate external callbacks where sources supply them; deduplicate internal submissions as well.
 - [ ] P02-T05 Implement compliance review queues, reason codes, evidence access, approval/rejection and re-verification workflows.
 - [ ] P02-T06 Enforce central KYC/account restriction checks for all financial entry points; enable read-only pre-KYC access only if approved as S scope.
 - [ ] P02-T07 Emit an idempotent approved-enrollment event for exactly one wallet and automatic card provisioning; complete wallet/issuer integration in Phases 4 and 6.
@@ -229,11 +230,11 @@ The backend implementation is in the Laravel repository. The consumer app is the
 | --- | --- | --- |
 | P02-T01, P02-T09 | Encrypted pending registration, purpose-bound hashed contact codes, atomic attempts/consumption, request limits, durable delivery/recovery, verified activation and legacy-credential isolation. Backend tests include real concurrent processes | Approved current notice content/versions, actual permitted delivery configuration and review of the integrated consumer journey |
 | P02-T02, P02-T08 | Password fallback, expiring device/session authority, inactivity/background lock, action-bound step-up, device revocation, native P256 signing bridges and Flutter onboarding/security/remediation screens. Android and unsigned iOS compile in CI. Native keys remain on the device; key possession is not hardware attestation | Approved session/step-up policy and physical iOS/Android biometric, cancellation, invalidation and fallback evidence |
-| P02-T03, P02-T04 | Trusted verification boundary, strict authenticated local fixture callbacks and owned evidence references. The default adapter and capture/upload path report unavailable | Selected document/liveness and sanctions/PEP/adverse-media services, their authenticated protocol, sandbox evidence and approved result mapping. Fixtures do not complete these tasks |
-| P02-T05, P02-T06 | Scoped MFA compliance queues, immutable review/receipt evidence, latched screening exceptions, independent restrictions, reverification and central current eligibility checks. Foreign resource lookups are scoped before retrieval | Approved KYC/risk, evidence access/retention and review policies; actual protected provider evidence access; integration of the guard at later financial commands |
-| P02-T07 | One durable initial-enrollment intent across duplicate callbacks, concurrent approvals and reverification. Notifications remain independent. Fixture intents carry their assurance and no financial authority | Selected-service/policy acceptance. Phase 4/6 consumers must recheck eligibility and prove one wallet/card effect; Phase 2 creates no balance or real issuer request |
+| P02-T03, P02-T04 | Trusted verification boundary, strict authenticated local fixture callbacks and owned evidence references. The default adapter and capture/upload path report unavailable. In-house operating approach accepted on 27 October 2026 | Approved FDD section 6.1 protocol, named evidence sources and validated methods, required policy fields, explicit implementation authorization and actual process evidence. Fixtures do not complete these tasks |
+| P02-T05, P02-T06 | Scoped MFA compliance queues, immutable review/receipt evidence, latched screening exceptions, independent restrictions, reverification and central current eligibility checks. Foreign resource lookups are scoped before retrieval | Approved KYC/risk, evidence access/retention and review policies; approved protected evidence access; integration of the guard at later financial commands |
+| P02-T07 | One durable initial-enrollment intent across duplicate callbacks, concurrent approvals and reverification. Notifications remain independent. Fixture intents carry their assurance and no financial authority | Approved in-house protocol/policy and actual verified identity evidence. Phase 4/6 consumers must recheck eligibility and prove one wallet/card effect; Phase 2 creates no balance or real issuer request |
 
-On 26 October 2026, the user confirmed that verification providers and the approved policy are **not selected yet**. They remain external completion gates. Hosting remains excluded under H-01. All Phase 2 task and acceptance checkboxes stay unchecked until their complete evidence and accountable review exist. Local defaults and fixture results do not approve policy or establish real KYC verification.
+On 26 October 2026, the user confirmed that verification providers and the approved policy were **not selected yet**. On 27 October 2026, the user accepted an in-house KYC approach. The current requirement is approval of an in-house protocol and its evidence sources, rather than selection of a mandatory commercial KYC platform. Hosting remains excluded under H-01. All Phase 2 task and acceptance checkboxes stay unchecked until their complete evidence and accountable review exist. Local defaults and fixture results do not approve policy or establish real KYC verification.
 
 The [V2 OpenAPI contract](pull2spend-v2.openapi.yaml), version 0.2.0, distinguishes implemented identity routes, local fixture routes, unavailable provider capture and planned later-phase operations. Backend consumer identity admission is disabled by default. New V2 credentials cannot bypass session controls through V1 or the legacy `/api/user` route. Ordinary legacy credentials retain their existing scope.
 
@@ -247,10 +248,20 @@ A follow-up at mobile revision `a6d5aac` corrects notification token handling in
 
 **Completion audit outcome - 26 October 2026: Blocked.** The working KYC integration deliverable and P02-T03/P02-T04 require selected services and their authenticated protocols; the user confirmed that these services are not selected. Approved notice content/versions, KYC/risk/session/evidence policy, physical biometric verification and accountable Phase 2 acceptance also remain unrecorded. P02-T01-P02-T09 and P02-A01-P02-A04 therefore remain open. The next integration work requires the selected-service documentation/sandbox access references and approved policy/notice baseline, followed by actual capture, evidence access, provider contract journeys, device checks and review. Hosting remains excluded under H-01.
 
+### In-house approach decision and protocol proposal - 27 October 2026
+
+The user accepted in-house KYC as the operating approach. This supersedes the commercial-provider selection assumption in the 26 October audit. It does not approve the document/liveness/screening methods, source coverage, reviewer responsibilities, evidence retention or issuer operating requirements.
+
+The proposed approval checklist is in [FDD section 6.1](PULL2SPEND_FDD.md#61-in-house-kyc-protocol-proposed-for-approval). It retains the BRD's automated ID-document authenticity requirement and proposes an explicit document allowlist and verification sources, validated liveness and face matching, current screening sources, separate examiner/checker roles, private evidence handling, versioned observations, current eligibility checks and process validation. Required choices and approvals are marked pending for IH-01-IH-08.
+
+Phase 2 remains blocked on the completed checklist and policy baseline. Before any new capture flow, internal-decision endpoint or selectable in-house adapter is implemented, the checklist must record the approved methods/sources, reviewer and retention rules, and applicable issuer/compliance requirements. The accountable policy owner must approve the completed protocol and explicitly authorize implementation. Operational enablement still requires the relevant issuer/compliance acceptance and Phase 2 review. The existing unavailable adapter, default-disabled admission and financial eligibility rules remain unchanged. This revision records the approach and a proposal only; it does not enable a sandbox onboarding path or production behavior.
+
+The next review must resolve the document authenticity source and supported ID types, liveness method, sanctions/PEP/adverse-media sources and refresh rules, examiner/checker responsibilities, evidence region/retention/access policy, current notice versions and accountable policy approvers. Physical-device validation and Phase 2 acceptance remain later completion gates. No task is complete merely because the approach is accepted or these documents are revised.
+
 Compliance reviewers use this procedure for the implemented workflow:
 
 1. Sign in to the back office with current MFA and open `/backoffice/identity/reviews`. Only the scoped Compliance role has identity review, evidence and restriction permissions.
-2. Inspect the current revision, authenticated check summaries and unresolved check names. Evidence references are audited; the actual protected provider viewer requires the selected service. Generic case closure does not approve identity.
+2. Inspect the current revision, authenticated check summaries and unresolved check names. Evidence references are audited; actual protected evidence viewing requires the approved process and sources. Generic case closure does not approve identity.
 3. Submit the expected revision, coded reason, evidence reference and decision. Approval requires all mandatory checks to be complete and every latched screening exception explicitly resolved. Stale review attempts are rejected.
 4. Request reverification or impose/clear an account restriction through its separate audited action. A fresh adverse observation after approval forces reverification and creates a new owned incident. Older clear callbacks cannot restore approval.
 5. Check the immutable decision/audit evidence and the consumer-safe status/notification. Verify central eligibility separately. Review actions never credit a wallet, issue a card or settle funds.
@@ -566,7 +577,7 @@ This mapping assigns every FDD acceptance scenario to delivery evidence; it does
 | Legal issuer/licensing, safeguarding and funded wallet model | Before Phase 4 financial implementation and Phase 6 issuer design | Owner, legal/compliance, finance, issuer | Block the affected regulated/funding work |
 | Supplied-value confirmation, safe reserve, confirm and reversal operations, and ownership proof | Before adapter certification and Phase 5 integration | Partnerships, engineering | Partner remains view-only or redemption disabled |
 | Platform fee bearer, supplied-value commercial basis, payout basis, tiers, rounding and separately approved FX policy | Before Phase 4 commercial implementation | Finance, owner | Calculation/ledger model cannot be accepted |
-| KYC/risk limits, wallet caps and step-up thresholds | Before Phase 2/5 eligibility and commitment acceptance | Compliance, product, issuer | Financial eligibility/limit tests cannot close |
+| In-house KYC protocol/sources, risk limits, wallet caps and step-up thresholds | Protocol approval before Phase 2 capture/internal-decision implementation; approved policy before Phase 2/5 eligibility and commitment acceptance | Compliance, product, issuer | Capture/decision implementation and financial eligibility/limit acceptance remain blocked |
 | Issuer balance authority, exceptional captures and mobile wallets | Before Phase 6 certification | Issuer, finance, engineering | Card MVP/Day-1 provisioning cannot close |
 | Partner funding direction, netting, files and payment evidence | Before Phase 7 financial close | Finance, partnerships | Settlement cannot be finalized as a reliable process |
 | Retention/residency, RTO/RPO and case/service SLAs | Before relevant controls and Phase 8 readiness | Compliance, operations, engineering | Release evidence remains incomplete |
@@ -585,7 +596,7 @@ The user deferred hosting on 26 October 2026. H-01 covers hosting selection, iso
 | --- | --- | --- | --- |
 | 0 - Decisions and feasibility | Planned | Pending | Pending |
 | 1 - Foundations | Complete | Merged into dev with passing post-merge CI. See [foundations evidence](PULL2SPEND_PHASE1_FOUNDATIONS.md). Erastus: accepted, as directly reported by the user. Hosting deferred to H-01 | 26 October 2026 (user report date) |
-| 2 - Identity | Blocked | Engineering completion audit recorded in section 5. Services and approved policy are not selected; physical-device and accountable acceptance evidence remain open. Identity/native CI passes, while legacy compatibility remains failing | Pending |
+| 2 - Identity | Blocked | In-house approach accepted on 27 October 2026. FDD section 6.1 protocol/method/source and policy approval remain pending before capture/internal-decision implementation. Physical-device and accountable acceptance evidence remain open. Identity/native CI passes; legacy compatibility remains failing | Pending |
 | 3 - Connections | Planned | Pending | Pending |
 | 4 - Ledger and rules | Planned | Pending | Pending |
 | 5 - Redemption | Planned | Pending | Pending |
