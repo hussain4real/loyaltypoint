@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Pull2Spend consumer and foundation API contracts
-  version: 0.3.0
+  version: 0.3.1
   description: Phase 2 identity implementation and later-phase design contracts. Each operation declares its delivery status. Consumer identity admission is disabled by default. The user approved policy baseline P2-KYC-2026-10-28-v1 and Regula/Mesh recommendations. Licensed verification is deferred to a required pre-launch milestone; the real adapter remains unavailable. All-clear observations require an examiner recommendation and a different checker before approval. Local verification fixtures are never financial authority. Existing V1 legacy point behavior remains separate, with pending V2 activation denied through V1 login. Later financial, hosting and operating decisions remain gated. No point conversion or automatic FX is introduced.
 servers:
 - url: /api/v2
@@ -4067,6 +4067,11 @@ components:
         expires_at:
           type: string
           format: date-time
+        resend_after_seconds:
+          type: integer
+          minimum: 0
+          maximum: 1800
+          description: Server-directed wait after contact code issuance before another code may be requested. Present for contact verification challenges.
         next_action:
           type: string
         payload:

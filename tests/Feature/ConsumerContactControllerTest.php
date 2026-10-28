@@ -20,7 +20,7 @@ it('registers verifies and logs in through real V2 routes without early authorit
     $response = $this->postJson('/api/v2/auth/registrations', [
         'display_name' => 'Mobile consumer', 'contact' => ['kind' => 'email', 'value' => 'mobile@example.invalid'],
         'password' => 'MobilePassword123!', 'password_confirmation' => 'MobilePassword123!', 'terms_version' => 'terms-1', 'privacy_notice_version' => 'privacy-1',
-    ])->assertOk()->assertJsonPath('purpose', 'contact_verification')->assertJsonPath('methods.0', 'verified_channel_otp')->assertJsonMissingPath('access_token');
+    ])->assertOk()->assertJsonPath('purpose', 'contact_verification')->assertJsonPath('resend_after_seconds', 60)->assertJsonPath('methods.0', 'verified_channel_otp')->assertJsonMissingPath('access_token');
     $delivery = ConsumerOtpDelivery::sole();
     Queue::assertPushed(DeliverConsumerContactCode::class, fn ($job): bool => $job->deliveryId === $delivery->id);
     $this->assertDatabaseCount('users', 0);

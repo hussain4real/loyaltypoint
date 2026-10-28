@@ -62,6 +62,6 @@ class ConsumerContactController extends Controller
     private function challengeResponse(ConsumerChallenge $challenge): JsonResponse
     {
         return response()->json(['reference' => $challenge->id, 'purpose' => 'contact_verification', 'methods' => ['verified_channel_otp'],
-            'expires_at' => $challenge->expires_at->toIso8601String(), 'next_action' => 'verify_contact'])->header('Cache-Control', 'no-store, private');
+            'expires_at' => $challenge->expires_at->toIso8601String(), 'resend_after_seconds' => (int) config('pull2spend.consumer.contact_resend_seconds', 60), 'next_action' => 'verify_contact'])->header('Cache-Control', 'no-store, private');
     }
 }

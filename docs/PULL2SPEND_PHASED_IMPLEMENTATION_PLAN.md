@@ -2,11 +2,11 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.10 |
+| Version | 0.11 |
 | Date | 28 October 2026 |
 | Status | Phase 2 foundations in progress; KYC baseline approved, licensed integration deferred |
 | Business owner | Bankole, as named in the BRD |
-| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.6 |
+| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.7 |
 | Business source | [Pull2Spend BRD](Pull2Spend_BRD_2.docx), Draft v1.0 |
 | Business review copy | [FDD PDF](PULL2SPEND_FDD.pdf) |
 | Plan review copy | [Implementation plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
@@ -67,6 +67,7 @@ Each applicable offer/snapshot/transaction retains the supplied points quantity,
 | 0.8 | 27 October 2026 | Record the user's acceptance of in-house KYC as the operating approach. Require approval of the proposed checks, evidence sources and policy before implementing capture, internal decisions or an in-house adapter. Preserve task IDs and all Phase 2 completion gates. |
 | 0.9 | 27 October 2026 | Record the user's approval of IH-01-IH-08. Replace the control-approval blocker with the specific missing methods, sources and operating-policy values. Preserve task IDs, unchecked Phase 2 gates and separate implementation/operational evidence. |
 | 0.10 | 28 October 2026 | Record approval of the recommended KYC baseline and the subsequent licensed integration deferral. Continue Phase 2 foundations; retain P02-T03/P02-T04 as required before Phase 8 acceptance or live financial enablement. Preserve all task IDs and completion gates; hosting excluded. |
+| 0.11 | 28 October 2026 | Record mobile resend timing, server-permitted financial status and disposal-race regressions, plus Erastus as the user-designated physical-device test owner. Keep the licensed integration deferral, open acceptance gates and all task IDs. |
 
 The illustrative partner response is **10,000 points with a supplied monetary value of QAR 350.00.** Under the deducted-fee example, platform share at 12% is QAR 42.00, wallet credit is QAR 308.00, partner incentive at 25% of platform share is QAR 10.50 and platform retained revenue is QAR 31.50. Point-funding settlement obligations remain separate from the incentive; the example does not approve a funding direction or amount. The partner-billed fee variant still credits QAR 350.00 where that agreed model applies.
 
@@ -231,14 +232,14 @@ The backend implementation is in the Laravel repository. The consumer app is the
 | Tasks | Implemented evidence | Remaining completion evidence |
 | --- | --- | --- |
 | P02-T01, P02-T09 | Encrypted pending registration, purpose-bound hashed contact codes, atomic attempts/consumption, request limits, durable delivery/recovery, verified activation and legacy-credential isolation. Backend tests include real concurrent processes | Approved current notice content/versions, actual permitted delivery configuration and review of the integrated consumer journey |
-| P02-T02, P02-T08 | Password fallback, expiring device/session authority, inactivity/background lock, action-bound step-up, device revocation, native P256 signing bridges and Flutter onboarding/security/remediation screens. Android and unsigned iOS compile in CI. Native keys remain on the device; key possession is not hardware attestation | Session/step-up baseline approved on 28 October 2026; physical iOS/Android biometric, cancellation, invalidation and fallback evidence remains required |
+| P02-T02, P02-T08 | Password fallback, expiring device/session authority, inactivity/background lock, action-bound step-up, device revocation, native P256 signing bridges and Flutter onboarding/security/remediation screens. Android and unsigned iOS compile in CI. Native keys remain on the device; key possession is not hardware attestation | Session/step-up baseline approved on 28 October 2026. Erastus owns the pending physical iOS/Android biometric, cancellation, invalidation and fallback checks |
 | P02-T03, P02-T04 | Trusted verification boundary, strict authenticated local fixture callbacks and owned evidence references. The default adapter and capture/upload path report unavailable. In-house operating approach and IH-01-IH-08 controls approved on 27 October 2026 | Regula/Mesh licensed integration and actual verification/process evidence, deferred to the required pre-launch milestone. Fixtures do not complete these tasks |
 | P02-T05, P02-T06 | Scoped MFA compliance queues, immutable review/receipt evidence, latched screening exceptions, independent restrictions, reverification and central current eligibility checks. Foreign resource lookups are scoped before retrieval | Baseline approved; named operational appointments, evidence classification/protected viewing, actual integration evidence and guard integration at later financial commands remain required |
 | P02-T07 | One durable initial-enrollment intent across duplicate callbacks, concurrent approvals and reverification. Notifications remain independent. Fixture intents carry their assurance and no financial authority | Actual verified identity evidence under the approved baseline. Phase 4/6 consumers must recheck eligibility and prove one wallet/card effect; Phase 2 creates no balance or real issuer request |
 
 On 26 October 2026, the user confirmed that verification providers and the approved policy were **not selected yet**. On 27 October 2026, the user accepted an in-house KYC approach. The user subsequently approved all IH-01-IH-08 controls on the same date. The remaining inputs are the required methods, evidence sources and operating-policy values. A commercial KYC platform is optional. Hosting remains excluded under H-01. All Phase 2 task and acceptance checkboxes stay unchecked until their complete evidence and accountable review exist. The later 28 October approval supplies the baseline; fixture results still do not establish real KYC verification.
 
-The [V2 OpenAPI contract](pull2spend-v2.openapi.yaml), version 0.3.0, distinguishes implemented identity routes, local fixture routes, unavailable provider capture and planned later-phase operations. Backend consumer identity admission is disabled by default. New V2 credentials cannot bypass session controls through V1 or the legacy `/api/user` route. Ordinary legacy credentials retain their existing scope.
+The [V2 OpenAPI contract](pull2spend-v2.openapi.yaml), version 0.3.1, distinguishes implemented identity routes, local fixture routes, unavailable provider capture and planned later-phase operations. Backend consumer identity admission is disabled by default. New V2 credentials cannot bypass session controls through V1 or the legacy `/api/user` route. Ordinary legacy credentials retain their existing scope.
 
 Implementation review is tracked in [backend PR 31](https://github.com/hussain4real/loyaltypoint/pull/31), targeting `dev`, and [mobile draft PR 15](https://github.com/Wafaa-app/wafaa/pull/15), targeting the mobile repository's existing `feature/dev` branch. On 26 October 2026, backend revision `cbcdd3f` passed all four CI checks: the MySQL suite passed 673 tests / 2,446 assertions, followed by six concurrent-worker tests / 53 assertions. An initial MySQL migration failure was corrected by shortening four generated constraint names and adding a SQL-compilation regression; it was not treated as a passing run.
 
@@ -273,6 +274,27 @@ The policy/review implementation removes callback-only approval. A scoped examin
 Local validation for the 28 October implementation passes 685 backend tests with 2,523 assertions, including two simultaneous checker processes producing one approval, one conflict and one enrollment intent. HTTP tests cover examiner submission, same-user rejection and a different signed-in checker. The complete local backend suite and Pint pass. These results do not establish actual Regula/Mesh verification or physical-device readiness.
 
 Hosting, processing-location selection and evidence-store provisioning remain outside this delivery under H-01. Real verification remains unavailable and financial admission remains disabled. Named Compliance appointments, evidence-retention classification, notice content, physical-device validation, mobile compatibility and accountable review remain completion/operating gates as applicable.
+
+### Mobile policy alignment and device-test ownership - 28 October 2026
+
+The backend challenge contract, version 0.3.1, supplies `resend_after_seconds` for contact verification. The mobile app follows that wait, shows an English/Arabic countdown, prevents early requests and keeps the current challenge after a rejected resend. Returning to sign in or disposing the controller cancels the countdown. Late responses cannot recreate it after disposal. Financial-lock presentation now checks the server's allowed actions and verification availability as well as KYC/restriction/policy status. A verified label alone cannot suggest financial access.
+
+The financial-lock widget regression failed before the fix because the lock message was absent. Separate late-success and late-error regressions showed state/timer changes after disposal before their fixes. All 57 focused identity/onboarding/notification tests pass after the changes, and strict analysis reports no issues. Backend contact tests pass 31 tests / 143 assertions, and the complete backend suite passes 685 tests / 2,524 assertions. These results do not establish live delivery, hardware verification or completed licensed KYC.
+
+A fresh full mobile baseline has 774 passes / 49 failures. The first changed parallel run had 780 passes / 50 failures, including an extra compiler-load error; the same compiler-crash events also appeared in the baseline and the affected legacy file passed all 15 tests in isolation. The final single-worker compatibility run has 781 passes / the same 49 failure labels, with no new or resolved failure labels. The seven added regressions pass. Full compatibility remains a failing gate; focused identity validation is separate evidence.
+
+The user designated Erastus to run the remaining physical iPhone and Android checks on 28 October 2026. His assignment does not record execution or acceptance. Use an installable build from the reviewed mobile revision and the corresponding backend revision, with local non-production configuration and synthetic test accounts. Keep the existing application IDs. iOS installation may require Erastus's local development signing; an unsigned CI build alone cannot provide device evidence. No hosting service is selected or provisioned for this work.
+
+| Physical scenario, on both iOS and Android | Required result | Owner/status |
+| --- | --- | --- |
+| Enroll and sign in | With OS biometrics configured, enable biometric login after password sign-in. Sign out and sign in through the OS biometric prompt. The backend verifies a new device-key challenge. KYC/financial restrictions remain in force. | Erastus; pending |
+| Cancel and use fallback | Cancel the biometric prompt. No authenticated session is created from cancellation. Password login remains usable and does not require a failed biometric proof to be accepted. | Erastus; pending |
+| Change biometric enrollment | Add/remove an OS biometric enrollment. The old key no longer authenticates. Password fallback and explicit fresh device enrollment recover access. | Erastus; pending |
+| Revoke the device | Remove the biometric device registration. A retained old key cannot authenticate against the backend. Password fallback and reviewed re-enrollment remain available. | Erastus; pending |
+| Background and inactivity | Background the app and return, then repeat after the configured 5-minute inactivity interval. Identity details stay hidden until the permitted reauthentication succeeds. | Erastus; pending |
+| Unavailable biometric capability | Test missing/disabled enrollment or a denied OS prompt. The app offers safe password fallback and does not claim successful biometric verification. | Erastus; pending |
+
+For each platform record the mobile/backend commit, build identifier, OS/device model, execution date, scenario result and sanitized evidence reference. Include the observed failure and recovery steps where applicable. Keep credentials and raw biometric/identity material out of the evidence. Attach or link results to the delivery review so Erastus's technical verification can be assessed separately from accountable Phase 2 acceptance and later issuer/compliance readiness.
 
 Compliance reviewers use this procedure for the implemented workflow:
 
@@ -612,7 +634,7 @@ The user deferred hosting on 26 October 2026. H-01 covers hosting selection, iso
 | --- | --- | --- | --- |
 | 0 - Decisions and feasibility | Planned | Pending | Pending |
 | 1 - Foundations | Complete | Merged into dev with passing post-merge CI. See [foundations evidence](PULL2SPEND_PHASE1_FOUNDATIONS.md). Erastus: accepted, as directly reported by the user. Hosting deferred to H-01 | 26 October 2026 (user report date) |
-| 2 - Identity | In progress | KYC baseline approved on 28 October 2026. Provider-independent foundations continue; P02-T03/P02-T04 licensed integration is deferred but required before Phase 8 acceptance or live financial enablement. Physical-device, mobile compatibility and accountable acceptance remain open | Pending |
+| 2 - Identity | In progress | KYC baseline approved on 28 October 2026. Provider-independent foundations continue; P02-T03/P02-T04 licensed integration is deferred but required before Phase 8 acceptance or live financial enablement. Erastus-owned physical-device checks, mobile compatibility and accountable acceptance remain open | Pending |
 | 3 - Connections | Planned | Pending | Pending |
 | 4 - Ledger and rules | Planned | Pending | Pending |
 | 5 - Redemption | Planned | Pending | Pending |
