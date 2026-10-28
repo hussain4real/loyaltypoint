@@ -83,10 +83,11 @@ it('commits one initial intent across concurrent independent checkers and a repl
         $examine = kycConcurrentStaffContext($examiner).'$app->make(App\\Services\\ConsumerIdentityService::class)->recommendApproval($staff->user, '.var_export($revision->reference, true).', 1, "checks_examined", "review:examiner", [], "standard", '.var_export(now()->addYears(2)->toDateString(), true).');';
         $examination = new Process([PHP_BINARY, '-r', $bootstrap.$examine], base_path(), $environment);
         expect($examination->run())->toBe(0, $examination->getErrorOutput().$examination->getOutput());
+        $recommendationReference = ConsumerReviewDecision::where('decision', 'recommend_verified')->sole()->reference;
         $approvers = [];
         foreach ([1, 2] as $index) {
             $checker = StaffMembership::factory()->enrolled()->create(['role' => StaffRole::Compliance, 'partner_ids' => null, 'customer_ids' => null]);
-            $approve = kycConcurrentStaffContext($checker).'try { $app->make(App\\Services\\ConsumerIdentityService::class)->review($staff->user, '.var_export($revision->reference, true).', 1, App\\Enums\\KycState::Verified, "checks_approved", "review:checker-'.$index.'"); echo "approved"; } catch (App\\Services\\ConsumerIdentityFailure $failure) { if ($failure->errorCode !== "identity_review_conflict") { throw $failure; } echo "conflict"; }';
+            $approve = kycConcurrentStaffContext($checker).'try { $app->make(App\\Services\\ConsumerIdentityService::class)->review($staff->user, '.var_export($revision->reference, true).', 1, App\\Enums\\KycState::Verified, "checks_approved", "review:checker-'.$index.'", [], '.var_export($recommendationReference, true).'); echo "approved"; } catch (App\\Services\\ConsumerIdentityFailure $failure) { if ($failure->errorCode !== "identity_review_conflict") { throw $failure; } echo "conflict"; }';
             $approver = new Process([PHP_BINARY, '-r', $bootstrap.$approve], base_path(), $environment);
             $approver->setTimeout(30)->start();
             $approvers[] = $approver;

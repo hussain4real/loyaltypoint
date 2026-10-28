@@ -61,14 +61,14 @@ it('requires an examiner and a different checker even for all clear automated re
     $service->applyProviderDecision(kycPolicyObservation($revision));
     expect($revision->identity->fresh()->kyc_state)->toBe(KycState::UnderReview);
     $examiner = kycPolicyReviewer();
-    expect(fn () => app(ConsumerIdentityService::class)->review($examiner, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker'))
+    expect(fn () => app(ConsumerIdentityService::class)->review($examiner, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference')))
         ->toThrow(ConsumerIdentityFailure::class, 'examiner_recommendation_required');
     app(ConsumerIdentityService::class)->recommendApproval($examiner, $revision->reference, 1, 'checks_reviewed', 'review:examiner', [], 'standard', now()->addYears(2)->toDateString());
     $this->assertDatabaseCount('consumer_enrollment_intents', 0);
-    expect(fn () => app(ConsumerIdentityService::class)->review($examiner, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker'))
+    expect(fn () => app(ConsumerIdentityService::class)->review($examiner, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference')))
         ->toThrow(ConsumerIdentityFailure::class, 'independent_checker_required');
     $checker = kycPolicyReviewer();
-    app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker');
+    app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference'));
     expect($revision->identity->fresh()->kyc_state)->toBe(KycState::Verified);
     expect($revision->identity->fresh()->expires_at->toDateTimeString() === now()->addDays(365)->toDateTimeString())->toBeTrue();
     $this->assertDatabaseCount('consumer_enrollment_intents', 1);
@@ -85,7 +85,7 @@ it('caps approved validity by risk and document expiry', function (string $risk,
     $examiner = kycPolicyReviewer();
     app(ConsumerIdentityService::class)->recommendApproval($examiner, $revision->reference, 1, 'checks_reviewed', 'review:examiner', [], $risk, now()->addDays($expiryDays)->toDateString());
     $checker = kycPolicyReviewer();
-    app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker');
+    app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference'));
     $expected = $expiryDays < $expectedDays ? now()->addDays($expiryDays)->endOfDay() : now()->addDays($expectedDays);
     expect($revision->identity->fresh()->expires_at->toDateTimeString() === $expected->toDateTimeString())->toBeTrue();
 })->with([['elevated', 500, 90], ['standard', 20, 365]]);
@@ -104,7 +104,7 @@ it('invalidates the examiner recommendation when observations or policy change',
         $service->applyProviderDecision(kycPolicyObservation($revision));
     }
     $checker = kycPolicyReviewer();
-    expect(fn () => app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker'))
+    expect(fn () => app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference')))
         ->toThrow(ConsumerIdentityFailure::class, $policyChanges ? 'identity_policy_changed' : 'examiner_recommendation_stale');
     $this->assertDatabaseCount('consumer_enrollment_intents', 0);
 })->with([false, true]);
@@ -118,7 +118,7 @@ it('blocks approval at the screening freshness boundary', function (): void {
     app(ConsumerIdentityService::class)->recommendApproval($examiner, $revision->reference, 1, 'checks_reviewed', 'review:examiner', [], 'standard', now()->addYear()->toDateString());
     $this->travel(24)->hours();
     $checker = kycPolicyReviewer();
-    expect(fn () => app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker'))
+    expect(fn () => app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference')))
         ->toThrow(ConsumerIdentityFailure::class, 'screening_stale');
     $this->assertDatabaseCount('consumer_enrollment_intents', 0);
 });
@@ -142,7 +142,7 @@ it('refreshes clear monitoring evidence without extending KYC and revokes eligib
     $examiner = kycPolicyReviewer();
     app(ConsumerIdentityService::class)->recommendApproval($examiner, $revision->reference, 1, 'checks_reviewed', 'review:examiner', [], 'standard', now()->addYears(2)->toDateString());
     $checker = kycPolicyReviewer();
-    app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker');
+    app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference'));
     $expiry = $revision->identity->fresh()->expires_at;
     $this->travel(12)->hours();
     $service->applyProviderDecision(kycPolicyObservation($revision));
@@ -153,4 +153,19 @@ it('refreshes clear monitoring evidence without extending KYC and revokes eligib
     expect($revision->identity->fresh()->kyc_state)->toBe(KycState::ReverificationRequired);
     expect($revision->identity->fresh()->expires_at)->toBeNull();
     $this->assertDatabaseCount('consumer_enrollment_intents', 1);
+});
+
+it('rejects a replaced recommendation even when its observations and resolved checks are unchanged', function (): void {
+    $this->freezeTime();
+    $revision = ConsumerVerificationRevision::factory()->create(['policy_reference' => 'P2-KYC-2026-10-28-v1']);
+    app(ConsumerIdentityService::class)->applyProviderDecision(kycPolicyObservation($revision));
+    $examiner = kycPolicyReviewer();
+    app(ConsumerIdentityService::class)->recommendApproval($examiner, $revision->reference, 1, 'checks_reviewed', 'review:original', [], 'elevated', now()->addYears(2)->toDateString());
+    $reviewedReference = $revision->latestRecommendation()->value('reference');
+    app(ConsumerIdentityService::class)->recommendApproval($examiner, $revision->reference, 1, 'risk_reassessed', 'review:replacement', [], 'standard', now()->addYears(2)->toDateString());
+    $checker = kycPolicyReviewer();
+    expect(fn () => app(ConsumerIdentityService::class)->review($checker, $revision->reference, 1, KycState::Verified, 'checks_reviewed', 'review:checker',
+        recommendationReference: $reviewedReference))->toThrow(ConsumerIdentityFailure::class, 'examiner_recommendation_stale');
+    $this->assertDatabaseCount('consumer_enrollment_intents', 0);
+    expect($revision->identity->fresh()->kyc_state)->toBe(KycState::UnderReview);
 });

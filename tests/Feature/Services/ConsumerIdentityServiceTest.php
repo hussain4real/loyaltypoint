@@ -89,7 +89,7 @@ function consumerIdentityApprove(ConsumerVerificationRevision $revision): void
 {
     $checker = consumerIdentityPrepareChecker($revision);
     app(ConsumerIdentityService::class)->review($checker, $revision->reference, $revision->revision,
-        KycState::Verified, 'checks_approved', 'review:checker');
+        KycState::Verified, 'checks_approved', 'review:checker', recommendationReference: $revision->latestRecommendation()->value('reference'));
 }
 
 it('keeps the provider unavailable by default without a fabricated enrollment or upload', function (): void {
@@ -202,7 +202,7 @@ it('requires explicit check resolution evidence before a compliance approval', f
         ->toThrow(ConsumerIdentityFailure::class, 'screening_review_unresolved');
     $reviewer = consumerIdentityPrepareChecker($revision, ['sanctions', 'pep']);
     $service = app(ConsumerIdentityService::class);
-    $service->review($reviewer, $revision->reference, 1, KycState::Verified, 'checks_resolved', 'review:evidence', ['sanctions', 'pep']);
+    $service->review($reviewer, $revision->reference, 1, KycState::Verified, 'checks_resolved', 'review:evidence', ['sanctions', 'pep'], recommendationReference: $revision->latestRecommendation()->value('reference'));
 
     expect($session->identity->fresh()->kyc_state)->toBe(KycState::Verified);
     $this->assertDatabaseCount('consumer_review_decisions', 2);
@@ -249,7 +249,7 @@ it('retains one initial intent through reviewed reverification and ignores old r
     expect($session->identity->fresh()->kyc_state)->toBe(KycState::UnderReview);
     $reviewer = consumerIdentityPrepareChecker($second);
     $service = app(ConsumerIdentityService::class);
-    $service->review($reviewer, $second->reference, 2, KycState::Verified, 'checks_resolved', 'review:new-evidence');
+    $service->review($reviewer, $second->reference, 2, KycState::Verified, 'checks_resolved', 'review:new-evidence', recommendationReference: $second->latestRecommendation()->value('reference'));
 
     expect($session->identity->fresh()->kyc_state)->toBe(KycState::Verified);
     $this->assertDatabaseCount('consumer_enrollment_intents', 1);
@@ -342,7 +342,7 @@ it('latches an unresolved hit through a later clear callback until an authorized
         ->toThrow(ConsumerIdentityFailure::class, 'screening_review_unresolved');
     $reviewer = consumerIdentityPrepareChecker($revision, ['sanctions']);
     $service = app(ConsumerIdentityService::class);
-    $service->review($reviewer, $revision->reference, 1, KycState::Verified, 'checks_resolved', 'review:evidence', ['sanctions']);
+    $service->review($reviewer, $revision->reference, 1, KycState::Verified, 'checks_resolved', 'review:evidence', ['sanctions'], recommendationReference: $revision->latestRecommendation()->value('reference'));
     $this->assertDatabaseCount('consumer_enrollment_intents', 1);
     expect(ConsumerEnrollmentIntent::first()->payload)->toMatchArray(['verification_assurance' => 'local_fixture', 'financial_authority' => false, 'requires_downstream_eligibility' => true, 'policy_approved_at_emission' => false]);
 });
@@ -415,7 +415,7 @@ it('carries required document exception review across remediation instead of sil
         ->toThrow(ConsumerIdentityFailure::class, 'screening_review_unresolved');
     $reviewer = consumerIdentityPrepareChecker($second, ['document']);
     $service = app(ConsumerIdentityService::class);
-    $service->review($reviewer, $second->reference, 2, KycState::Verified, 'remediation_reviewed', 'review:new-document', ['document']);
+    $service->review($reviewer, $second->reference, 2, KycState::Verified, 'remediation_reviewed', 'review:new-document', ['document'], recommendationReference: $second->latestRecommendation()->value('reference'));
     $this->assertDatabaseCount('consumer_enrollment_intents', 1);
 });
 
@@ -430,7 +430,7 @@ it('requires a new reviewed revision for fresh adverse evidence after manual app
     $service = app(ConsumerIdentityService::class);
     $reviewer = consumerIdentityPrepareChecker($first, ['sanctions']);
     $service = app(ConsumerIdentityService::class);
-    $service->review($reviewer, $first->reference, 1, KycState::Verified, 'checks_resolved', 'review:original', ['sanctions']);
+    $service->review($reviewer, $first->reference, 1, KycState::Verified, 'checks_resolved', 'review:original', ['sanctions'], recommendationReference: $first->latestRecommendation()->value('reference'));
     OperationalCase::where('source_reference', $first->reference)->update(['state' => 'closed', 'closed_at' => now()]);
     if (! $sameInstant) {
         $this->travel(1)->seconds();
@@ -454,7 +454,7 @@ it('requires a new reviewed revision for fresh adverse evidence after manual app
     expect($session->identity->fresh()->kyc_state)->toBe(KycState::UnderReview);
     $reviewer = consumerIdentityPrepareChecker($next, [$check]);
     $service = app(ConsumerIdentityService::class);
-    $service->review($reviewer, $next->reference, 2, KycState::Verified, 'fresh_checks_resolved', 'review:fresh-evidence', [$check]);
+    $service->review($reviewer, $next->reference, 2, KycState::Verified, 'fresh_checks_resolved', 'review:fresh-evidence', [$check], recommendationReference: $next->latestRecommendation()->value('reference'));
     expect($session->identity->fresh()->kyc_state)->toBe(KycState::Verified);
     $this->assertDatabaseCount('consumer_enrollment_intents', 1);
     $this->assertDatabaseCount('consumer_review_decisions', 4);

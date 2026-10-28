@@ -153,7 +153,7 @@ it('renders the scoped compliance queue with a working decision form and preserv
     enrollmentStaffLogin($this, StaffRole::Compliance);
     $this->get('/backoffice/identity/reviews')->assertOk()->assertSee('Identity review queue')->assertSee($revision->reference);
     $this->from('/backoffice/identity/reviews')->post('/backoffice/identity/reviews/'.$revision->reference,
-        ['expected_revision' => 1, 'decision' => 'verified', 'reason' => 'review_completed', 'evidence_reference' => 'review:evidence'])
+        ['expected_revision' => 1, 'decision' => 'verified', 'reason' => 'review_completed', 'evidence_reference' => 'review:evidence', 'recommendation_reference' => (string) Str::uuid()])
         ->assertRedirect('/backoffice/identity/reviews')->assertSessionHasErrors('review');
     $this->assertDatabaseCount('consumer_enrollment_intents', 0);
 });
@@ -202,7 +202,7 @@ it('records an examiner recommendation through the form and requires a different
     $this->from('/backoffice/identity/reviews')->post($url, $input)->assertRedirect('/backoffice/identity/reviews')->assertSessionHasNoErrors();
     $this->assertDatabaseCount('consumer_enrollment_intents', 0);
     $this->get('/backoffice/identity/reviews')->assertOk()->assertSee('Latest examiner recommendation')->assertSee('review:examiner')->assertSee(now()->addYears(2)->toDateString());
-    $approval = ['expected_revision' => 1, 'decision' => 'verified', 'reason' => 'checks_approved', 'evidence_reference' => 'review:checker', 'risk_level' => 'standard', 'document_expires_on' => ''];
+    $approval = ['expected_revision' => 1, 'decision' => 'verified', 'reason' => 'checks_approved', 'evidence_reference' => 'review:checker', 'risk_level' => 'standard', 'document_expires_on' => '', 'recommendation_reference' => $revision->latestRecommendation()->value('reference')];
     $this->post($url, $approval)->assertRedirect()->assertSessionHasErrors('review');
     $this->post('/backoffice/logout')->assertRedirect();
     enrollmentStaffLogin($this, StaffRole::Compliance);

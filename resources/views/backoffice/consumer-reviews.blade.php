@@ -14,6 +14,7 @@
 @endif
 <form method="post" action="{{ route('backoffice.identity.review', ['revision' => $record->reference]) }}">@csrf
 <input type="hidden" name="expected_revision" value="{{ $record->revision }}">
+<input type="hidden" name="recommendation_reference" value="{{ $record->latestRecommendation?->reference }}">
 <label>Decision <select name="decision"><option value="rejected">Reject with remediation</option><option value="reverification_required">Require reverification</option><option value="recommend_verified">Examiner: recommend approval</option><option value="verified">Checker: approve recommendation</option></select></label>
 <label>Risk level for examiner recommendation <select name="risk_level"><option value="standard">Standard</option><option value="elevated">Elevated</option></select></label>
 <label>Document expiry from evidence, for examiner recommendation <input type="date" name="document_expires_on"></label>

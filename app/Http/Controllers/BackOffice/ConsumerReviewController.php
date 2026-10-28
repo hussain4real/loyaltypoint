@@ -43,13 +43,14 @@ class ConsumerReviewController extends Controller
             'evidence_reference' => ['required', 'string', 'regex:/\A[A-Za-z0-9][A-Za-z0-9_.:\/-]{0,179}\z/'],
             'resolved_checks' => ['sometimes', 'array'], 'resolved_checks.*' => ['string'],
             'risk_level' => ['exclude_unless:decision,recommend_verified', 'required', Rule::in(['standard', 'elevated'])],
-            'document_expires_on' => ['exclude_unless:decision,recommend_verified', 'required', 'date_format:Y-m-d']]);
+            'document_expires_on' => ['exclude_unless:decision,recommend_verified', 'required', 'date_format:Y-m-d'],
+            'recommendation_reference' => ['exclude_unless:decision,verified', 'required', 'uuid']]);
         try {
             if ($data['decision'] === 'recommend_verified') {
                 $service->recommendApproval($request->user('web'), $revision, (int) $data['expected_revision'], $data['reason'], $data['evidence_reference'],
                     $data['resolved_checks'] ?? [], $data['risk_level'], $data['document_expires_on']);
             } else {
-                $service->review($request->user('web'), $revision, (int) $data['expected_revision'], KycState::from($data['decision']), $data['reason'], $data['evidence_reference'], $data['resolved_checks'] ?? []);
+                $service->review($request->user('web'), $revision, (int) $data['expected_revision'], KycState::from($data['decision']), $data['reason'], $data['evidence_reference'], $data['resolved_checks'] ?? [], $data['recommendation_reference'] ?? null);
             }
         } catch (ConsumerIdentityFailure $exception) {
             return back()->withErrors(['review' => $exception->errorCode]);

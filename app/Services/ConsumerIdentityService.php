@@ -256,16 +256,16 @@ final class ConsumerIdentityService
     }
 
     /** @param list<string> $resolvedChecks */
-    public function review(User $actor, string $reference, int $expectedRevision, KycState $decision, string $reason, string $evidenceReference, array $resolvedChecks = []): ConsumerVerificationRevision
+    public function review(User $actor, string $reference, int $expectedRevision, KycState $decision, string $reason, string $evidenceReference, array $resolvedChecks = [], ?string $recommendationReference = null): ConsumerVerificationRevision
     {
-        return $this->recordReview($actor, $reference, $expectedRevision, $decision, $reason, $evidenceReference, $resolvedChecks);
+        return $this->recordReview($actor, $reference, $expectedRevision, $decision, $reason, $evidenceReference, $resolvedChecks, recommendationReference: $recommendationReference);
     }
 
     /**
      * @param  list<string>  $resolvedChecks
      * @param  array{risk_level:string,document_expires_on:string}|null  $recommendation
      */
-    private function recordReview(User $actor, string $reference, int $expectedRevision, KycState $decision, string $reason, string $evidenceReference, array $resolvedChecks, ?array $recommendation = null): ConsumerVerificationRevision
+    private function recordReview(User $actor, string $reference, int $expectedRevision, KycState $decision, string $reason, string $evidenceReference, array $resolvedChecks, ?array $recommendation = null, ?string $recommendationReference = null): ConsumerVerificationRevision
     {
         $revision = $this->access->scopeQuery(ConsumerVerificationRevision::query(), $actor, 'kyc.review')
             ->where('reference', $reference)->firstOrFail();
@@ -279,7 +279,7 @@ final class ConsumerIdentityService
 
         sort($resolvedChecks);
 
-        return DB::transaction(function () use ($actor, $revision, $expectedRevision, $decision, $reason, $evidenceReference, $resolvedChecks, $recommendation): ConsumerVerificationRevision {
+        return DB::transaction(function () use ($actor, $revision, $expectedRevision, $decision, $reason, $evidenceReference, $resolvedChecks, $recommendation, $recommendationReference): ConsumerVerificationRevision {
             $identity = $this->lockedIdentity($revision->consumer_identity_id);
             $current = ConsumerVerificationRevision::query()->whereKey($revision->id)->lockForUpdate()->firstOrFail();
             $this->access->authorize($actor, 'kyc.review', customerId: $current->customer_id);
@@ -321,7 +321,7 @@ final class ConsumerIdentityService
                         throw new ConsumerIdentityFailure('independent_checker_required', 409);
                     }
                     $reviewContext = $proposal->review_context;
-                    if (! is_array($reviewContext) || ! hash_equals($observationHash, $reviewContext['observation_hash'])
+                    if ($recommendationReference !== $proposal->reference || ! is_array($reviewContext) || ! hash_equals($observationHash, $reviewContext['observation_hash'])
                         || $proposal->resolved_checks !== $resolvedChecks) {
                         throw new ConsumerIdentityFailure('examiner_recommendation_stale', 409);
                     }
