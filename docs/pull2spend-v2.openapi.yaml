@@ -1,18 +1,11 @@
 openapi: 3.1.0
 info:
   title: Pull2Spend consumer and foundation API contracts
-  version: 0.1.0
-  description: Phase 1 design baseline for technical and accountable-owner review. Every consumer operation is explicitly
-    planned and is not a registered application route. Only POST /api/v2/foundation/callbacks/{source} is implemented
-    as a disabled-by-default local/testing simulator protocol. Existing /api/v1 behavior remains separate. The authenticated
-    consumer identity is never accepted as request data; all resources are ownership-scoped before lookup/list/filter.
-    Current eligibility, consent and step-up are checked at mutation time. Planned contracts define behavior without
-    approving legal/issuer/funding/commercial/retention policies. No automatic FX, point-to-money conversion, cash
-    deposit or P2P behavior is introduced. Back-office HTML/session/MFA/internal service contracts are documented
-    in PULL2SPEND_PHASE1_FOUNDATIONS.md; this spec does not invent staff JSON routes.
+  version: 0.3.1
+  description: Phase 2 identity implementation and later-phase design contracts. Each operation declares its delivery status. Consumer identity admission is disabled by default. The user approved policy baseline P2-KYC-2026-10-28-v1 and Regula/Mesh recommendations. Licensed verification is deferred to a required pre-launch milestone; the real adapter remains unavailable. All-clear observations require an examiner recommendation and a different checker before approval. Local verification fixtures are never financial authority. Existing V1 legacy point behavior remains separate, with pending V2 activation denied through V1 login. Later financial, hosting and operating decisions remain gated. No point conversion or automatic FX is introduced.
 servers:
 - url: /api/v2
-  description: Version boundary only. Planned routes are absent until their later implementation phase.
+  description: V2 boundary. Planned routes remain absent; implemented identity admission is controlled by configuration.
 security:
 - ConsumerBearer: []
 tags:
@@ -61,9 +54,9 @@ paths:
       summary: Read current consumer eligibility
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned read-only eligibility decision. The backend derives identity from the authenticated token.
-        Allowed actions are informative and must be checked again at mutation time.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -71,16 +64,26 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
         '200':
-          description: Owned resource or result.
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eligibility'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
   /partners:
     get:
       operationId: listPartners
@@ -1320,24 +1323,26 @@ paths:
       summary: Start contact-verified registration
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned public registration intent. Apply anti-enumeration, purpose-bound contact verification
-        and configured rate/attempt limits. No financial eligibility is granted.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
         '200':
-          description: Owned resource or result.
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
@@ -1352,27 +1357,29 @@ paths:
   /auth/contact-verifications:
     post:
       operationId: verifyRegistrationContact
-      summary: Verify purpose-bound contact challenge
+      summary: Verify a purpose-bound contact challenge
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned public challenge verification. Proof is purpose-bound, expiring, single-use and attempt-limited.
-        A repeated consumed challenge does not issue new authority.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
         '200':
-          description: Owned resource or result.
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
@@ -1387,27 +1394,29 @@ paths:
   /auth/challenges:
     post:
       operationId: startLoginChallenge
-      summary: Start password PIN or device-key login
+      summary: Start password or device-key login
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned public login challenge. Return a uniform response without account enumeration. Server
-        chooses permitted methods and verifies fallback/new-device policy.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '200':
-          description: Owned resource or result.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '201':
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
@@ -1422,34 +1431,33 @@ paths:
   /auth/sessions:
     post:
       operationId: createConsumerSession
-      summary: Verify login and create device-bound session
+      summary: Verify login and issue a scoped session
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned public session creation. Verify the login-purpose challenge/proof, contact activation
-        and device policy. A consumed challenge cannot replay. Session inactivity lock/lifetime is policy-driven.
-        No raw biometric data is accepted.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '200':
-          description: Owned resource or result.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '201':
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Session'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
       requestBody:
         required: true
         content:
@@ -1460,23 +1468,35 @@ paths:
   /auth/logout:
     post:
       operationId: logoutConsumerSession
-      summary: Revoke the current authenticated session
+      summary: Revoke the current session
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned. Durably revoke the current authenticated bearer/device session and invalidate its bound
-        step-up evidence before returning 204. Logout remains permitted for a restricted account and does not require
-        new step-up. The response has no polling operation because the revoked bearer cannot authenticate it. Existing
-        financial liabilities and durable work remain intact. Other sessions use the explicit account security workflow.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
-        '204':
-          description: Current bearer/device session revoked durably. No response body or operation polling is required.
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+        '204':
+          description: No response body.
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
   /profile:
     get:
       operationId: getConsumerProfile
@@ -1544,12 +1564,10 @@ paths:
   /identity/uploads:
     post:
       operationId: createProtectedEvidenceUpload
-      summary: Request a protected owned evidence upload
+      summary: Unavailable until the identity provider is selected
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
-        and current eligibility apply.
+      x-implementation-status: unavailable-provider-not-selected
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -1557,39 +1575,25 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '200':
-          description: Owned resource or result.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IdentityUploadHandoff'
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/StepUp'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IdentityUploadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      description: Protected capture/upload SDK and signed handoff require the selected document/liveness provider.
+        The current route returns 503; it does not return a fabricated upload URL.
   /enrollments:
     post:
       operationId: submitIdentityEnrollment
-      summary: Submit identity and screening evidence
+      summary: Submit owned verification evidence
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned. Submit owned identity/liveness/details evidence to the approved provider under current
-        consent and retention policy. Manual screening exceptions remain unresolved until review. No consumer-provided
-        approval bypasses KYC. Approved enrollment creates wallet/card intent exactly once.
+      x-implementation-status: implemented-fixture-only
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -1597,118 +1601,43 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '202':
-          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
-            Poll the returned owned operation; do not blindly resend.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Operation'
-          headers:
-            Location:
-              description: Owned operation or resource status URI under /api/v2.
-              schema:
-                type: string
-                format: uri-reference
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/StepUp'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EnrollmentRequest'
-  /enrollments/current:
-    get:
-      operationId: getCurrentIdentityEnrollment
-      summary: Read own identity and remediation state
-      tags:
-      - Identity
-      x-implementation-status: planned
-      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
-        and current eligibility apply.
-      responses:
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
-        '200':
-          description: Owned resource or result.
+        '202':
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Enrollment'
-  /enrollments/{enrollment_reference}/remediation:
-    post:
-      operationId: submitIdentityRemediation
-      summary: Submit supported identity remediation or reverification
-      tags:
-      - Identity
-      x-implementation-status: planned
-      description: Planned. Only an owned enrollment with an approved remediation/reverification path accepts new
-        verified evidence. Old evidence/history remains linked under retention policy; no repeated wallet/card creation.
-      responses:
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '202':
-          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
-            Poll the returned owned operation; do not blindly resend.
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-          headers:
-            Location:
-              description: Owned operation or resource status URI under /api/v2.
-              schema:
-                type: string
-                format: uri-reference
-      parameters:
-      - $ref: '#/components/parameters/enrollment_reference'
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/StepUp'
+                $ref: '#/components/schemas/SafeError'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/EnrollmentRequest'
-  /devices:
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /enrollments/current:
     get:
-      operationId: listConsumerDevices
-      summary: List owned registered devices
+      operationId: getCurrentIdentityEnrollment
+      summary: Read own verification state
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
-        and current eligibility apply.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -1716,27 +1645,119 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
         '200':
-          description: Owned resource or result.
+          description: Current owned result. No financial completion is implied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+  /enrollments/{revision}/remediation:
+    post:
+      operationId: remediateIdentityEnrollment
+      summary: Submit evidence for own current remediation
+      tags:
+      - Identity
+      x-implementation-status: implemented-fixture-only
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '202':
+          description: Current owned result. No financial completion is implied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentRequest'
+      parameters:
+      - name: revision
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /auth/devices:
+    get:
+      operationId: listConsumerDevices
+      summary: List own registered devices
+      tags:
+      - Identity
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DevicePage'
-      parameters:
-      - $ref: '#/components/parameters/Cursor'
-      - $ref: '#/components/parameters/Limit'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
     post:
       operationId: enrollConsumerDevice
-      summary: Request verified device-key enrollment
+      summary: Prove ownership of the proposed device key
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned. Authenticate consumer and required step-up; verify approved attestation/key-possession
-        evidence before active device state. Device references alone cannot bind a session.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -1744,45 +1765,41 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '202':
-          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
-            Poll the returned owned operation; do not blindly resend.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '201':
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-          headers:
-            Location:
-              description: Owned operation or resource status URI under /api/v2.
+                $ref: '#/components/schemas/Device'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
               schema:
-                type: string
-                format: uri-reference
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/StepUp'
+                $ref: '#/components/schemas/SafeError'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeviceEnrollmentRequest'
-  /devices/{device_reference}/revoke:
-    post:
+              $ref: '#/components/schemas/DeviceKeyProof'
+  /auth/devices/{reference}:
+    delete:
       operationId: revokeConsumerDevice
-      summary: Revoke an owned device and bound sessions
+      summary: Revoke an owned device and all its sessions
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned. Required step-up and recovery controls apply. Revoke device keys/sessions/evidence without
-        discarding financial liabilities or durable work.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -1790,46 +1807,37 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '202':
-          description: Durably accepted or awaiting an authoritative outcome. Pending/unknown is not financial completion.
-            Poll the returned owned operation; do not blindly resend.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '204':
+          description: No response body.
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-          headers:
-            Location:
-              description: Owned operation or resource status URI under /api/v2.
-              schema:
-                type: string
-                format: uri-reference
+                $ref: '#/components/schemas/SafeError'
       parameters:
-      - $ref: '#/components/parameters/device_reference'
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/StepUp'
-      requestBody:
+      - name: reference
+        in: path
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/EmptyActionRequest'
-  /step-up/challenges:
+        schema:
+          type: string
+  /auth/step-up/challenges:
     post:
-      operationId: createStepUpChallenge
-      summary: Request action-bound step-up
+      operationId: startConsumerStepUp
+      summary: Challenge an action on the current session
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
-        and current eligibility apply.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -1837,38 +1845,41 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '200':
-          description: Owned resource or result.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '201':
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Challenge'
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/StepUp'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StepUpChallengeRequest'
-  /step-up/verifications:
+              $ref: '#/components/schemas/ConsumerStepUpRequest'
+  /auth/step-up:
     post:
-      operationId: verifyStepUpChallenge
-      summary: Complete action-bound step-up
+      operationId: verifyConsumerStepUp
+      summary: Verify the action-bound step-up challenge
       tags:
       - Identity
-      x-implementation-status: planned
-      description: Planned contract. This consumer route is not implemented in Phase 1. Authentication-derived ownership
-        and current eligibility apply.
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
@@ -1876,23 +1887,26 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
-        '200':
-          description: Owned resource or result.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '201':
+          description: Current owned result. No financial completion is implied.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StepUpEvidence'
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/StepUp'
+                $ref: '#/components/schemas/ConsumerStepUpEvidence'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
       requestBody:
         required: true
         content:
@@ -2011,13 +2025,13 @@ paths:
       tags:
       - Foundation callbacks
       x-implementation-status: implemented-local-testing-only
-      description: Implemented simulator protocol only in APP_ENV local/testing with callbacks enabled and a configured
-        simulator source/key. Admission is disabled by default. Verify lowercase HMAC-SHA256(timestamp + "." + exact
-        request bytes), key at least 32 bytes, timestamp skew within configured bound (current default 300 seconds),
-        and body bytes within configured limit (current default 16384). Configuration errors fail closed. No real
-        partner protocol or economic capability is certified. Duplicate callback identity remains durable; a fresh
-        signature/timestamp is required on every delivery. Processing and recovery continue independently of new-admission
-        flags.
+      description: Implemented simulator protocol only in APP_ENV local/testing with callbacks enabled and a
+        configured simulator source/key. Admission is disabled by default. Verify lowercase HMAC-SHA256(timestamp
+        + "." + exact request bytes), key at least 32 bytes, timestamp skew within configured bound (current
+        default 300 seconds), and body bytes within configured limit (current default 16384). Configuration errors
+        fail closed. No real partner protocol or economic capability is certified. Duplicate callback identity
+        remains durable; a fresh signature/timestamp is required on every delivery. Processing and recovery continue
+        independently of new-admission flags.
       security:
       - CallbackSignature: []
       parameters:
@@ -2055,8 +2069,8 @@ paths:
               occurred_at: '2026-10-26T10:00:00Z'
       responses:
         '202':
-          description: Encrypted normalized event persisted durably. Dispatch/worker/notification success is not
-            required to acknowledge receipt.
+          description: Encrypted normalized event persisted durably. Dispatch/worker/notification success is
+            not required to acknowledge receipt.
           content:
             application/json:
               schema:
@@ -2093,6 +2107,256 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CallbackError'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+  /auth/contact-verifications/{reference}/resend:
+    post:
+      operationId: resendConsumerContactCode
+      summary: Replace an unconsumed contact challenge
+      tags:
+      - Identity
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Current owned result. No financial completion is implied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+      security: []
+      parameters:
+      - name: reference
+        in: path
+        required: true
+        schema:
+          type: string
+  /auth/session:
+    get:
+      operationId: getConsumerSession
+      summary: Read current session including lock state
+      tags:
+      - Identity
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Current owned result. No financial completion is implied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumerSessionState'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+  /auth/session/lock:
+    post:
+      operationId: lockConsumerSession
+      summary: Lock the current session
+      tags:
+      - Identity
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '204':
+          description: No response body.
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+  /auth/session/unlock:
+    post:
+      operationId: unlockConsumerSession
+      summary: Unlock with password fallback
+      tags:
+      - Identity
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '200':
+          description: Current owned result. No financial completion is implied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumerSessionState'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumerPasswordProof'
+  /auth/devices/challenges:
+    post:
+      operationId: challengeConsumerDevice
+      summary: Challenge a proposed P256 device key
+      tags:
+      - Identity
+      x-implementation-status: implemented-disabled-by-default
+      description: Implemented consumer identity route. Admission is disabled by default. Ownership and current
+        session/device state are checked; provider and policy gates remain separate.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '201':
+          description: Current owned result. No financial completion is implied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+        '423':
+          description: Session is locked. Use the allowed password unlock flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceKeyChallengeRequest'
+  /identity/callbacks/{source}:
+    post:
+      operationId: acceptConsumerVerificationFixture
+      summary: Accept authenticated local verification fixture
+      tags:
+      - Identity
+      x-implementation-status: implemented-local-testing
+      description: Local/testing fixture source only. HMAC SHA256(timestamp + period + exact raw body), key at
+        least 32 bytes, bounded timestamp skew/body size. Exact source/event deduplication, revision/operation
+        ownership, immutable receipt and transition commit atomically. This does not certify an external provider
+        or grant financial authority.
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '202':
+          description: Current owned result. No financial completion is implied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumerCallbackReceipt'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumerVerificationFixture'
+      security: []
+      parameters:
+      - name: source
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Callback-Timestamp
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-Callback-Signature
+        in: header
+        required: true
+        schema:
+          type: string
 components:
   securitySchemes:
     ConsumerBearer:
@@ -2301,6 +2565,8 @@ components:
       type: object
       additionalProperties: false
       properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
         kyc_state:
           type: string
           enum:
@@ -2310,26 +2576,43 @@ components:
           - verified
           - rejected
           - reverification_required
-        account_restricted: *id003
+        account_restriction:
+          type: string
+          enum:
+          - none
+          - suspended
+          - offboarded
         allowed_actions:
           type: array
-          items: *id002
+          items:
+            type: string
         reason_codes:
           type: array
-          items: *id002
-        step_up:
-          $ref: '#/components/schemas/StepUpRequirement'
-        policy_version:
-          $ref: '#/components/schemas/Reference'
+          items:
+            type: string
+        verification_available:
+          type: boolean
+        policy_reference:
+          type:
+          - string
+          - 'null'
+        policy_approved:
+          type: boolean
+        next_action:
+          type: string
       required:
+      - reference
       - kyc_state
-      - account_restricted
+      - account_restriction
       - allowed_actions
       - reason_codes
-      - step_up
-      - policy_version
-      description: Current server decision for the authenticated consumer. This resource cannot grant eligibility
-        and is rechecked at every mutation.
+      - verification_available
+      - policy_reference
+      - policy_approved
+      - next_action
+      description: Current authoritative eligibility. Fixture verification never establishes financial authority.
+        Pending review, restrictions, stale KYC, unapproved policy and unselected provider deny financial actions.
+        Every future command rechecks the same authority and required action-bound step-up.
     Partner:
       type: object
       additionalProperties: false
@@ -3433,19 +3716,62 @@ components:
               - capability_disabled
               - unsupported_integration_operation
               - rate_limited
+              - verification_provider_unavailable
+              - invalid_contact
+              - consumer_session_required
+              - device_key_conflict
+              - authentication_failed
+              - device_not_found
+              - invalid_step_up
+              - invalid_device_key
+              - fresh_password_required
+              - unsupported_authentication_method
+              - authentication_rate_limited
+              - consumer_identity_disabled
+              - invalid_verification_callback
+              - unsupported_consumer_action
+              - identity_policy_required
+              - invalid_identity_evidence
+              - enrollment_not_found
+              - enrollment_already_in_progress
+              - verification_operation_conflict
+              - verification_subject_not_found
+              - invalid_identity_review
+              - identity_review_conflict
+              - examiner_recommendation_required
+              - independent_checker_required
+              - examiner_recommendation_stale
+              - identity_document_expired
+              - identity_policy_changed
+              - self_identity_review_denied
+              - screening_stale
+              - contact_resend_too_soon
+              - screening_review_unresolved
+              - identity_evidence_not_owned
+              - verification_callback_rejected
+              - contact_channel_unavailable
+              - contact_delivery_unavailable
+              - challenge_unavailable
+              - contact_verification_required
+              - consumer_restricted
+              - identity_policy_unapproved
+              - verification_provider_not_selected
             reference:
               anyOf:
               - $ref: '#/components/schemas/Reference'
               - type: 'null'
-            next_action: *id002
+            next_action:
+              type: string
             field_errors:
               type: array
               items:
                 type: object
                 additionalProperties: false
                 properties:
-                  field: *id002
-                  code: *id002
+                  field:
+                    type: string
+                  code:
+                    type: string
                 required:
                 - field
                 - code
@@ -3667,25 +3993,21 @@ components:
       description: Opaque case-sensitive URI path reference. Source/account evidence containing slash remains an
         ordinary Reference in JSON, not a resource path segment.
     ContactInput:
-      oneOf:
-      - type: object
-        additionalProperties: false
-        properties:
-          email:
-            type: string
-            format: email
-        required:
-        - email
-      - type: object
-        additionalProperties: false
-        properties:
-          mobile:
-            type: string
-            pattern: ^\+[1-9][0-9]{1,14}$(?![\s\S])
-        required:
-        - mobile
-      description: One contact identifier for this challenge. The backend normalizes it and uses uniform responses
-        to prevent account enumeration.
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          const: email
+        value:
+          type: string
+          format: email
+          maxLength: 255
+      required:
+      - kind
+      - value
+      description: Implemented consumer contact channel is email. Phone registration/delivery requires a selected
+        verified channel and an explicit later contract; no fabricated email is assigned.
     RegistrationRequest:
       type: object
       additionalProperties: false
@@ -3695,6 +4017,15 @@ components:
         display_name:
           type: string
           minLength: 1
+          maxLength: 255
+        password:
+          type: string
+          minLength: 12
+          maxLength: 1024
+          writeOnly: true
+        password_confirmation:
+          type: string
+          writeOnly: true
         terms_version:
           $ref: '#/components/schemas/Reference'
         privacy_notice_version:
@@ -3702,10 +4033,14 @@ components:
       required:
       - contact
       - display_name
+      - password
+      - password_confirmation
       - terms_version
       - privacy_notice_version
-      description: Creates a contact-verification intent under approved notice versions. It does not grant KYC or
-        financial eligibility. Request/attempt limits are configured, with no policy threshold fixed here.
+      description: Email registration intent. Pending credentials are encrypted; no User, session, KYC or financial
+        authority exists before valid contact proof. Configured current notice versions are required. Duplicate
+        existing accounts receive the same public challenge shape without credential replacement. Phone delivery
+        is not enabled.
     Challenge:
       type: object
       additionalProperties: false
@@ -3726,19 +4061,36 @@ components:
             enum:
             - verified_channel_otp
             - password
-            - pin
             - device_signature
           minItems: 1
-        expires_at: *id001
-        next_action: *id002
+          maxItems: 1
+        expires_at:
+          type: string
+          format: date-time
+        resend_after_seconds:
+          type: integer
+          minimum: 0
+          maximum: 1800
+          description: Server-directed wait after contact code issuance before another code may be requested. Present for contact verification challenges.
+        next_action:
+          type: string
+        payload:
+          type: object
+          additionalProperties: false
+          properties:
+            message:
+              type: string
+              contentEncoding: base64
+              description: Decode and sign these exact opaque server bytes. P256 ECDSA SHA256, DER signature, base64
+                proof. Never independently reconstruct JSON.
+          required:
+          - message
       required:
       - reference
       - purpose
       - methods
       - expires_at
       - next_action
-      description: Purpose-bound, server-selected, expiring single-use challenge. Exact lifetimes/attempt controls
-        follow approved policy. Response never reveals OTP, secret, full destination or whether an account exists.
     ChallengeProof:
       type: object
       additionalProperties: false
@@ -3750,7 +4102,6 @@ components:
           enum:
           - verified_channel_otp
           - password
-          - pin
           - device_signature
         proof:
           type: string
@@ -3771,46 +4122,48 @@ components:
         contact:
           $ref: '#/components/schemas/ContactInput'
         device_reference:
-          anyOf:
-          - $ref: '#/components/schemas/Reference'
-          - type: 'null'
+          type:
+          - string
+          - 'null'
+        method:
+          type: string
+          enum:
+          - password
+          - device_signature
       required:
       - contact
-      description: Starts a uniform login challenge. New devices/locations require additional challenge only when
-        that optional requirement is enabled. Identity/device/session controls remain enforced regardless of user-supplied
-        references.
+      - method
     Session:
       type: object
       additionalProperties: false
       properties:
-        reference:
-          $ref: '#/components/schemas/Reference'
         access_token:
           type: string
-          description: Sensitive bearer credential returned once over TLS. Never logged or stored in audit; the
-            client uses protected device storage.
-        token_type:
-          type: string
-          const: Bearer
+          readOnly: true
+        reference:
+          $ref: '#/components/schemas/Reference'
         expires_at:
-          anyOf:
-          - *id001
-          - type: 'null'
+          type: string
+          format: date-time
         device_reference:
-          anyOf:
-          - $ref: '#/components/schemas/Reference'
-          - type: 'null'
-        eligibility:
-          $ref: '#/components/schemas/Eligibility'
+          $ref: '#/components/schemas/Reference'
+        locked:
+          type: boolean
+        assurance:
+          type: string
+          enum:
+          - password
+          - key_possession
       required:
-      - reference
       - access_token
-      - token_type
+      - reference
       - expires_at
       - device_reference
-      - eligibility
-      description: Session creation follows verified contact and approved authentication. The token alone cannot
-        bypass resource ownership, device binding, KYC, suspension or required step-up.
+      - locked
+      - assurance
+      description: Issued once after a single-use login challenge. Stored hashed by Sanctum and protected on the
+        device. Separate eligibility endpoint determines permitted actions; a session alone grants no financial
+        eligibility.
     ContactVerification:
       type: object
       additionalProperties: false
@@ -3966,7 +4319,9 @@ components:
       additionalProperties: false
       properties:
         reference:
-          $ref: '#/components/schemas/Reference'
+          type:
+          - string
+          - 'null'
         state:
           type: string
           enum:
@@ -3976,32 +4331,56 @@ components:
           - verified
           - rejected
           - reverification_required
-        created_at: *id001
-        updated_at: *id001
+        revision:
+          type: integer
+          minimum: 0
+        provider_available:
+          type: boolean
+        policy_reference:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
         verified_at:
-          anyOf:
-          - *id001
-          - type: 'null'
-        case_reference:
-          anyOf:
-          - $ref: '#/components/schemas/Reference'
-          - type: 'null'
-        remediation_codes:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        next_action:
+          type: string
+        reason_codes:
           type: array
-          items: *id002
-        next_action: *id002
+          items:
+            type: string
       required:
       - reference
       - state
+      - revision
+      - provider_available
+      - policy_reference
       - created_at
       - updated_at
       - verified_at
-      - case_reference
-      - remediation_codes
+      - expires_at
       - next_action
-      description: Automated screening/document evidence does not bypass a required manual review. Only approved
-        enrollment creates one wallet and one stable virtual-card intent. Repeated callbacks/submissions never duplicate
-        them. Consumer response excludes screening matches and internal compliance notes.
+      - reason_codes
+      description: Consumer-safe own verification state. Document, liveness, identity and all screening checks
+        are independent. Hits remain latched for scoped compliance review. No raw screening matches are exposed.
+        Real provider capture/integration is pending selection.
     DeviceEnrollmentRequest:
       type: object
       additionalProperties: false
@@ -4025,39 +4404,28 @@ components:
       properties:
         reference:
           $ref: '#/components/schemas/Reference'
-        state:
+        assurance:
           type: string
           enum:
-          - pending_verification
-          - active
-          - revoked
-        registered_at: *id001
-        last_verified_at:
-          anyOf:
-          - *id001
-          - type: 'null'
-        display_name: *id002
+          - password
+          - key_possession
+        revoked:
+          type: boolean
+        current:
+          type: boolean
       required:
       - reference
-      - state
-      - registered_at
-      - last_verified_at
-      - display_name
+      - assurance
     DevicePage:
       type: object
       additionalProperties: false
       properties:
-        data:
+        devices:
           type: array
           items:
             $ref: '#/components/schemas/Device'
-        next_cursor:
-          anyOf:
-          - *id002
-          - type: 'null'
       required:
-      - data
-      - next_cursor
+      - devices
     ConsentPage:
       type: object
       additionalProperties: false
@@ -4111,6 +4479,185 @@ components:
       - expires_at
       description: Server-issued completed evidence. Mutations recheck scope, action, session/device, expiry and
         any single-use requirement. The client cannot mint evidence by changing a field.
+    ConsumerSessionState:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        expires_at:
+          type: string
+          format: date-time
+        device_reference:
+          $ref: '#/components/schemas/Reference'
+        locked:
+          type: boolean
+        assurance:
+          type: string
+          enum:
+          - password
+          - key_possession
+      required:
+      - reference
+      - expires_at
+      - device_reference
+      - locked
+      - assurance
+      description: Current backend session state. Key possession is not hardware attestation. Inactivity, expiry,
+        current contact and device/token revocation are checked by the server.
+    DeviceKeyChallengeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        public_key:
+          type: string
+          maxLength: 1024
+          description: P256 prime256v1 DER SubjectPublicKeyInfo exported as PEM. Private keys and biometric templates
+            never leave the device.
+      required:
+      - public_key
+    DeviceKeyProof:
+      type: object
+      additionalProperties: false
+      properties:
+        challenge_reference:
+          $ref: '#/components/schemas/Reference'
+        proof:
+          type: string
+          contentEncoding: base64
+          writeOnly: true
+      required:
+      - challenge_reference
+      - proof
+    ConsumerStepUpRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        action_digest:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        method:
+          type: string
+          enum:
+          - password
+          - device_signature
+      required:
+      - action_digest
+      - method
+    ConsumerStepUpEvidence:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        expires_at:
+          type: string
+          format: date-time
+        action_digest:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      required:
+      - reference
+      - expires_at
+      - action_digest
+      description: Action-, device- and session-bound step-up evidence. Earlier evidence is invalidated on session
+        lock, unlock, logout and device revocation.
+    ConsumerPasswordProof:
+      type: object
+      additionalProperties: false
+      properties:
+        password:
+          type: string
+          maxLength: 1024
+          writeOnly: true
+      required:
+      - password
+    ConsumerVerificationFixture:
+      type: object
+      additionalProperties: false
+      properties:
+        event_reference:
+          $ref: '#/components/schemas/Reference'
+        revision_reference:
+          $ref: '#/components/schemas/Reference'
+        operation_reference:
+          $ref: '#/components/schemas/Reference'
+        checks:
+          type: object
+          additionalProperties: false
+          properties:
+            document:
+              type: string
+              enum:
+              - clear
+              - hit
+              - rejected
+              - pending
+            liveness:
+              type: string
+              enum:
+              - clear
+              - hit
+              - rejected
+              - pending
+            identity:
+              type: string
+              enum:
+              - clear
+              - hit
+              - rejected
+              - pending
+            sanctions:
+              type: string
+              enum:
+              - clear
+              - hit
+              - rejected
+              - pending
+            pep:
+              type: string
+              enum:
+              - clear
+              - hit
+              - rejected
+              - pending
+            adverse_media:
+              type: string
+              enum:
+              - clear
+              - hit
+              - rejected
+              - pending
+          required:
+          - document
+          - liveness
+          - identity
+          - sanctions
+          - pep
+          - adverse_media
+        occurred_at:
+          type: string
+          format: date-time
+        evidence_reference:
+          $ref: '#/components/schemas/Reference'
+      required:
+      - event_reference
+      - revision_reference
+      - operation_reference
+      - checks
+      - occurred_at
+      - evidence_reference
+    ConsumerCallbackReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          $ref: '#/components/schemas/Reference'
+        status:
+          const: accepted
+      required:
+      - reference
+      - status
   responses:
     Unauthenticated:
       description: Authentication is missing, expired or invalid.
@@ -4142,7 +4689,22 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/SafeError'
+            oneOf:
+            - $ref: '#/components/schemas/SafeError'
+            - type: object
+              additionalProperties: false
+              properties:
+                message:
+                  type: string
+                errors:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+              required:
+              - message
+              - errors
     Unavailable:
       description: A required capability, approved commercial/funding policy or external source is unavailable;
         no financial success is inferred.

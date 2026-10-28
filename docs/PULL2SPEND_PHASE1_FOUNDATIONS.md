@@ -2,13 +2,13 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.5 |
+| Version | 0.6 |
 | Date | 26 October 2026 |
 | Status | Phase 1 complete. Erastus's acceptance reported by the user. Hosting deferred |
 | Accountable security/operations reviewer | Erastus, designated by the user on 26 October 2026. Outcome: accepted, as reported by the user that day |
 | Scope | P01-T01 through P01-T09 and P01-A01 through P01-A04 |
 | Functional baseline | [Pull2Spend FDD](PULL2SPEND_FDD.md), version 0.3 |
-| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.5 |
+| Delivery baseline | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.6 |
 | Business source | [Original Pull2Spend BRD](Pull2Spend_BRD_2.docx), unchanged |
 
 ## 1. Delivery boundary and evidence
@@ -176,7 +176,7 @@ Audit context accepts only operation, event, case, approval, elevation, evidence
 
 ## 5. API contracts and ownership
 
-The machine-readable [OpenAPI 3.1 contract](pull2spend-v2.openapi.yaml) defines 53 operations: 52 planned consumer operations and the one implemented local/testing callback. It covers identity and screening enrollment, devices and action-bound step-up, consent, partner connections, quote/approval/redemption, wallet/card, support and disputes. Every operation declares its delivery status. Schema validation does not make planned routes executable or approve policy. Staff HTML forms and internal services are documented in section 7.
+At the Phase 1 baseline, the machine-readable [OpenAPI 3.1 contract](pull2spend-v2.openapi.yaml), version 0.1.0, defined 53 operations: 52 planned consumer operations and the one implemented local/testing callback. Phase 2 updates the same contract; its per-operation status and the phased plan's section 5 record current identity delivery. This document retains the accepted Phase 1 scope. Schema validation does not make planned routes executable or approve policy. Staff HTML forms and internal services are documented in section 7.
 
 ### 5.1 Implemented foundation callback
 
@@ -533,3 +533,4 @@ The user subsequently directed that hosting be left out of the current phase. Th
 | 0.3 | 26 October 2026 | Apply the user-directed hosting deferral. Verify revised P01-T08 repository deliverables and move hosted environment, managed-secret and activation evidence to H-01. Keep phase acceptance distinct from engineering verification |
 | 0.4 | 26 October 2026 | Record Erastus's user-designated security/operations review ownership and the merge into dev with passing post-merge CI. Preserve the pending review outcome and hosting deferral |
 | 0.5 | 26 October 2026 | Record Erastus's acceptance as directly reported by the user and close Phase 1. Preserve the hosting deferral, future decision gates and unchanged implementation |
+| 0.6 | 26 October 2026 | Clarify the historical Phase 1 API baseline as Phase 2 updates the shared OpenAPI contract and implementation plan. Phase 1 acceptance and hosting deferral remain unchanged |

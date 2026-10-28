@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('foundation:recover')->everyMinute()->withoutOverlapping(5);
+
+Schedule::command('consumer:recover-contact-codes')->everyMinute()->withoutOverlapping();

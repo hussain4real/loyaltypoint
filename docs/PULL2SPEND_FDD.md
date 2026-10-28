@@ -2,13 +2,13 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.3 |
-| Date | 26 October 2026 |
-| Status | Accepted to progress by BRS reviewer with valuation clarification; unresolved decisions remain under review |
+| Version | 0.8 |
+| Date | 28 October 2026 |
+| Status | Accepted to progress by BRS reviewer; KYC baseline approved; licensed verification deferred to required pre-launch integration |
 | Business owner | Bankole, as named in the source BRD |
 | Source | [Pull2Spend_BRD_2.docx](Pull2Spend_BRD_2.docx), Draft v1.0, 11 August 2026 |
 | Business review copy | [FDD PDF](PULL2SPEND_FDD.pdf) |
-| Delivery plan | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.3; [plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
+| Delivery plan | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.12; [plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
 | Classification | Confidential - Personal Project, inherited from the BRD |
 | Existing application | Wafaa, implemented in the `loyaltypoint` repository |
 | Target business process | Multi-loyalty aggregation → points redemption → monetary wallet → virtual card spend |
@@ -130,16 +130,62 @@ Card provisioning starts after approved enrollment even if the wallet is empty. 
 **Source:** FR-1.1-FR-1.9; BRD sections 7.8.1 and 9.2.
 
 1. Consumer registers with mobile number and/or email, accepts applicable terms/privacy notices, and verifies the chosen contact by OTP before activation. OTPs are purpose-bound, time-limited, single-use, and subject to retry/request controls; exact limits remain configurable.
-2. Consumer submits permitted identity document, liveness selfie, and required identity details. The identity provider checks document authenticity; screening evaluates sanctions, PEP, and adverse-media matches.
-3. Screening hits and document exceptions enter a manual compliance queue with reason codes and evidence. An automated KYC callback does not unlock financial features while a required review remains unresolved.
-4. Approved enrollment creates exactly one wallet and initiates an idempotent virtual card request. Repeated KYC callbacks do not create duplicate wallets/cards. Rejection permits supported remediation; suspension blocks financial initiation pending review.
+2. Consumer submits permitted identity documents, a liveness-checked selfie and required identity details through the approved verification process. BRD FR-1.2 requires an automated ID-document authenticity check before wallet or card access. The user accepted an in-house KYC approach on 27 October 2026. The user subsequently approved IH-01-IH-08 on the same date. On 28 October 2026, the user approved the recommended methods and policy values in section 6.2, then deferred their licensed integration. Real verification remains required before financial access.
+3. Screening hits and document exceptions enter a manual compliance queue with reason codes and evidence. Required checks and reviews must be resolved before financial eligibility can be granted. An upload, reviewer assertion or automated result alone cannot establish identity verification.
+4. Approved enrollment creates exactly one wallet and initiates an idempotent virtual card request. Repeated internal decision submissions or external callbacks cannot create duplicate wallets/cards. Rejection permits supported remediation; suspension blocks financial initiation pending review.
 5. Device-bound biometric login uses a PIN/password fallback. Sessions auto-lock after the configured inactivity interval. If FR-1.9 is enabled, new-device/location login requires a challenge and sends a notification to another verified channel.
+
+Contact-code responses include the server-directed resend wait. The mobile app displays a countdown, disables early resend and retains the active proof if a resend is rejected. Financial availability follows current server-permitted actions and verification availability; a `verified` label or policy approval alone cannot remove the financial lock message.
 
 KYC states are `not_started`, `pending`, `under_review`, `verified`, `rejected`, and `reverification_required`. Account restrictions are separate from KYC status. Consumers without approved KYC cannot redeem, hold wallet value, or receive a card. Read-only aggregation before full KYC is an S capability and only applies if enabled.
 
 Step-up applies to configured high-value redemptions, new loyalty connections, linked payout-detail changes where such details exist, and card freezing/closing. Proposed additional sensitive actions include unfreezing, reissuing, and revealing card details. No payout-detail feature is inferred beyond the BRD's high-risk-action reference.
 
 Consent records contain partner, scope, disclosure version, grant/revoke time, and connection reference. Revocation stops future access and redemption immediately and deletes or securely archives tokens according to policy. Required financial records remain retained. In-flight redemptions enter controlled completion/recovery using the agreed partner mechanism; revocation never silently discards a financial obligation.
+
+### 6.1 In-house KYC controls and required operating values
+
+On 27 October 2026, the user accepted in-house KYC and subsequently answered "approved" to the IH-01-IH-08 protocol review. All eight control requirements below are approved. A commercial KYC platform is optional. The BRD's expectation of specialized vendors is an assumption; its automated ID-document authenticity, liveness and screening requirements remain in scope.
+
+The initial control approval did not supply operating values. The user subsequently approved the section 6.2 baseline on 28 October 2026. The third column below identifies the evidence needed to operate each control. Regula and ComplyAdvantage access is deferred to the required pre-launch integration milestone in section 6.3. Current work can implement the approved policy and review controls using synthetic evidence. Consumer admission stays default-disabled and the real verification adapter stays unavailable.
+
+| ID | Approved control | Required operating values or evidence before implementation | Status |
+| --- | --- | --- | --- |
+| IH-01 | Support the BRD's national ID, passport and Qatar ID through an explicit country and document-type allowlist. Require the automated ID-document authenticity check in FR-1.2, then match identity details, validity and document holder. | Approve supported countries and document types, the automated authenticity method and reliable verification sources. Define validation evidence, tampering detection and inconclusive outcomes. Upload, OCR success or manual approval alone cannot replace the automated check. | Approved; see 6.2 and 6.3 |
+| IH-02 | Require identity-to-face matching and a liveness check through a documented process. Record the method, outcome, examiner and evidence reference. | Choose and validate an attended or automated method, including replay, impersonation and other presentation-attack controls. Define failure and inconclusive outcomes. An uploaded selfie or device biometric login cannot count as liveness verification. | Approved; see 6.2 and 6.3 |
+| IH-03 | Screen sanctions, PEP and adverse-media exposure using named, current data sources. Record search inputs, coverage, source/list version, search time and match disposition. | Approve applicable sanctions lists, PEP/adverse-media sources, refresh and re-screening frequency, matching rules, escalation and any dataset licensing. An empty or failed search cannot mean cleared. | Approved; see 6.2 and 6.3 |
+| IH-04 | An authorized examiner records check results. A different scoped Compliance reviewer approves a positive KYC outcome. Both use MFA. Unresolved hits, missing checks and stale revisions block approval. | Name the examiner and checker role holders, required qualifications, reason codes, escalation owners and review SLAs. The separation of duties is approved. Identify applicable issuer and compliance requirements and the accountable policy approver. | Approved; see 6.2 and 6.3 |
+| IH-05 | Keep evidence in encrypted private storage with narrowly scoped, time-limited access. Audit each view and decision. Keep raw documents, selfies and sensitive screening details out of logs, emails and general exports. | Approve storage region, retention periods, access rules, legal-hold requirements, deletion triggers and incident responsibilities. No evidence store is selected or provisioned by this approval. | Approved; see 6.2 and 6.3 |
+| IH-06 | Bind each observation and decision to the owned case, evidence revision and policy version. Preserve an immutable decision history and deduplicate repeated submissions. A restriction or fresh adverse result requires a new eligibility assessment. | Approve the required evidence for every check, observation validity, expiry, remediation and re-verification rules. Define how source availability and conflicting observations affect a decision. | Approved; see 6.2 and 6.3 |
+| IH-07 | Continue to require current approved KYC, an unrestricted account and required step-up before financial actions. Keep incomplete or inconclusive cases pending or under review. | Approve KYC/risk tiers, session and step-up rules, current terms/privacy notices and the policy's effective date. Name the accountable policy and operating-model approvers. | Approved; see 6.2 and 6.3 |
+| IH-08 | Validate the complete process before operational acceptance. Include tampered/expired documents, impersonation, unresolved screening hits, stale decisions, unauthorized evidence access, retries and physical-device biometric fallback. | Record the outstanding operating values and their accountable policy owner before implementing capture, internal decisions or an in-house adapter. Later record test evidence and accountable Phase 2 acceptance before operational enablement. | Approved; see 6.2 and 6.3 |
+
+The two-person positive-approval rule in IH-04 is approved. Its implementation evidence is recorded in the delivery plan. The baseline approval does not establish issuer or regulatory acceptance, select hosting or evidence storage, or close Phase 2. Selecting an in-house process preserves the BRD's document authenticity, liveness, sanctions, PEP and adverse-media requirements.
+
+### 6.2 Approved Phase 2 KYC baseline - 28 October 2026
+
+Policy reference: `P2-KYC-2026-10-28-v1`. The user approved the recommended methods, screening sources and operating values on 28 October 2026. The recommendation assumes a Qatar pilot because the BRD uses QAR and Qatar ID; launch market and issuer acceptance remain OD-02/OD-03 decisions. This records approval of the delivery baseline, not completed procurement, live verification or production authorization.
+
+| Area | Approved baseline | Implementation or operating evidence |
+| --- | --- | --- |
+| Document authenticity | Regula Document Reader SDK with automated authenticity, expiry, template and cross-zone consistency checks. Use chip validation where supported. Start with tested Qatar ID versions and an explicit passport allowlist appropriate to the permitted customer cohort. | Evaluation licence covering mobile and server-side checks; exact document/version capability matrix, tamper tests and authenticated server results. OCR or device-returned success alone cannot establish authenticity. |
+| Liveness and face matching | Regula Face SDK for live capture, presentation-attack detection and one-to-one comparison with the document portrait. Bind capture to the owned verification session and prevent replay/injection. | Licensed mobile/server features; certification and test reports for the exact version; live-device replay, impersonation and failure tests. Numeric matching thresholds require validation against that product and cohort. |
+| Screening | ComplyAdvantage Mesh customer screening and ongoing monitoring for sanctions, PEPs, relatives/close associates and adverse media. Include Qatar NCTC and UN coverage, checked against authoritative publications. Other lists follow issuer/jurisdiction requirements. | Sandbox credentials, approved configuration identifier and list coverage; Arabic/transliteration, alias, date-of-birth and adverse-media evaluation. Keep source/version/time, request reference and disposition. No result or unavailable source cannot mean clear. |
+| Review and ownership | A trained examiner recommends approval; a different scoped Compliance checker records the final decision. Both use MFA. A PEP match needs enhanced due diligence and senior approval; a confirmed sanctions match cannot be cleared as a false positive. | Bankole is the business sponsor and Erastus the technical reviewer under the approved recommendation. The individual Compliance Officer/MLRO, trained examiners/checkers and senior approver must be appointed before operation. |
+| KYC validity | Standard risk: 365 days. Elevated risk: 90 days. End validity earlier on document expiry, material identity change or adverse evidence. | Immutable risk/expiry assessment linked to the examiner recommendation and checker decision. A new observation cannot extend the original expiry. |
+| Screening freshness | Initial screening must be less than 24 hours old when approved. Use ongoing monitoring and process list updates promptly. Stale/unavailable screening blocks new financial initiation. | Fresh authenticated source observations and dataset freshness evidence; monitoring recovery and adverse-change tests. Existing liabilities, settlement and reconciliation continue during a pause. |
+| Consumer authentication | Maximum session 12 hours; inactivity lock after 5 minutes; lock on background; fresh authentication after expiry. OTP lifetime 5 minutes, maximum 5 attempts and resend interval 60 seconds, with combined account/device/network controls. | Boundary, replay, resend-bypass, session expiry and physical-device fallback evidence. Password freshness and action-bound step-up last no more than 5 minutes. Initially require step-up on each redemption and sensitive account/card action. |
+| Case service targets | Standard review within 1 business day. Potential sanctions matches cause immediate restriction and urgent Compliance escalation. | Owned case queues, escalation and aging evidence. Missing the target never produces automatic approval. |
+| Records and privacy | For the assumed Qatar operating model, retain required CDD records for at least 10 years after the relationship ends and transaction records for at least 10 years after completion. Legal holds override deletion. Classify raw biometric media separately before setting deletion rules. | Confirm statutory applicability and the evidence retention matrix with Compliance/issuer. Keep evidence private, encrypted, access-scoped and audited. No raw evidence in logs or general exports. |
+| Development and hosting | Use synthetic data during development. Hosting, processing-location selection and evidence-store provisioning remain deferred under H-01. | No real identity data is admitted until the later evidence-processing and privacy controls are validated. |
+
+Primary references checked for the recommendation: [Regula document security checks](https://docs.regulaforensics.com/develop/doc-reader-sdk/mobile/getting-started/security-checks/), [Regula Face SDK](https://regulaforensics.com/products/face-recognition-sdk/), [Mesh onboarding and screening](https://docs.mesh.complyadvantage.com/docs/onboarding), [UN sanctions](https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list), [Qatar national sanctions](https://portal.moi.gov.qa/wps/portal/en/NCTC/sanctionlist/listupdates/), [FATF PEP guidance](https://www.fatf-gafi.org/en/publications/Fatfrecommendations/Peps-r12-r22.html) and [Qatar AML Law, Article 20](https://almeezan.qa/EnglishLaws/Law%20No.%20%2820%29%20of%202019%20on%20the%20Promulgation%20of%20Anti-Money%20Laundering%20and%20Terrorism%20Financing%20Law.pdf). Product capabilities need validation on the selected licence/version. Policy intervals above are the approved recommendations, not claims that those intervals are statutory requirements.
+
+### 6.3 Required licensed integration deferred - 28 October 2026
+
+The user reported that licences/sandbox access are not available and requested deferral. Current Phase 2 delivery continues with contact verification, sessions, policy enforcement and two-person review using synthetic evidence. Regula document authenticity/liveness and ComplyAdvantage screening remain required M capabilities. Their implementation tasks retain IDs P02-T03/P02-T04 and move to a required integration milestone before Phase 8 acceptance and before any live financial enablement in Phases 5/6. They are not optional Phase 10 enhancements.
+
+Until the milestone passes, real document capture and verification are unavailable, unverified consumers remain ineligible for redemption, wallet value or card issuance, and fixtures carry no financial authority. Record the deferred task status separately from delivered foundations. The overall Phase 2/live-KYC acceptance criteria cannot be reported as passed from local fixtures. Hosting remains excluded under H-01.
 
 ## 7. Partner connection and point aggregation
 
@@ -394,7 +440,7 @@ The mobile apps communicate with Pull2Spend's backend, not directly with partner
 
 | Boundary | Minimum functional contract |
 | --- | --- |
-| Identity/screening provider | Submit case, status query, verified callback, review reason/evidence references and re-verification |
+| In-house KYC process and approved evidence sources | IH-01-IH-08 controls and section 6.2 baseline approved; real integration deferred under 6.3: owned case/evidence references, source and method provenance, versioned check observations, scoped staff decisions, status and re-verification; authenticated, deduplicated callbacks when an external source supplies results |
 | Loyalty connector | Authorize/revoke, read balance and supplied value where available, request authoritative offer for selected points, receive supplied amount/currency and points, retain quote/transaction reference and validity where supplied, confirm accepted terms, reserve/confirm debit, cancel/reverse and status query; capabilities declared explicitly; no partner conversion rules required |
 | Issuer/processor | Enroll/issue, tokenized reveal, freeze/unfreeze/close/reissue, device-wallet provisioning, fund/balance controls, card events, dispute interfaces and daily feed |
 | Partner settlement | Agreed schema/currency/direction, secure delivery, file acknowledgement, payment evidence and mismatch handling |
@@ -481,7 +527,7 @@ Ranges below include every requirement in the range. AC references identify prin
 
 ## 19. Open decisions and design dependencies
 
-OD-01 is resolved for product naming. All other decisions below retain their review status; the BRS reviewer's acceptance to progress does not approve legal, funding, issuer or commercial decisions. Proposed defaults are not approvals.
+OD-01 is resolved for product naming. The user accepted in-house KYC and approved IH-01-IH-08 within OD-10 on 27 October 2026. Methods, sources and operating values were approved on 28 October 2026. Licensed integration is deferred under section 6.3; named operational appointments, evidence details and issuer acceptance remain open. Other decisions below retain their review status. The BRS reviewer's acceptance to progress does not approve legal, funding, issuer or commercial decisions. Proposed defaults are not approvals.
 
 | ID | Decision / unresolved issue | Draft basis or recommendation | Decision owner |
 | --- | --- | --- | --- |
@@ -494,7 +540,7 @@ OD-01 is resolved for product naming. All other decisions below retain their rev
 | OD-07 | Payout basis and revenue ceiling | BRD example uses platform share; define cost deductions, gross/interchange basis, tiers and overrides | Owner, finance |
 | OD-08 | Payout caps, rounding and period rules | Approve decimal rounding/residuals, cap counters, marginal/retrospective tiers and period timezone | Finance |
 | OD-09 | Multi-partner failure and unknown outcomes | All-or-nothing spendable credit with confirmed compensation; guarantee required per connector | Product, engineering, partners |
-| OD-10 | KYC tiers, limits, expiry and action thresholds | Verified-only financial access; exact limits, quote TTL, retry/SLA/hold policies configurable | Compliance, product, issuer |
+| OD-10 | In-house KYC protocol, tiers, limits, expiry and action thresholds | In-house approach and IH-01-IH-08 controls approved by user on 27 October 2026. Section 6.2 methods and operating values approved on 28 October 2026. Licensed integration is deferred under 6.3; named Compliance appointments, exact document/source coverage and raw-evidence retention classification remain pending. Verified-only financial access remains required; exact limits, quote TTL and retry/SLA/hold policies remain configurable | Compliance, product, issuer |
 | OD-11 | Issuer balance authority and exceptional card events | Shared authoritative holds/funding control; define late capture/refund/chargeback/fee treatment | Issuer, finance, engineering |
 | OD-12 | Apple Pay/Google Pay and card network support | Day-1 BRD requirement; validate issuer, country, network and provisioning eligibility | Issuer, product |
 | OD-13 | Partner membership policy and legacy data | One active connection per user/partner proposed; explicit re-consent/ownership mapping | Product, partnerships |
@@ -529,6 +575,9 @@ Launch reporting tracks connector onboarding time, active/redeeming users, KYC o
 | --- | --- | --- |
 | Product branding | User-supplied business feedback | Pull2Spend confirmed; OD-01 resolved, 26 October 2026 |
 | FDD acceptance to progress and valuation | BRS developer/reviewer, feedback supplied by user | Accepted to progress; feedback supplied here on 26 October 2026. "The G is not required." The point-owner system supplies the point number and equivalent value; its conversion principles are not required. |
+| In-house KYC operating approach | User in this chat | Accepted on 27 October 2026. Initially recorded as approach acceptance only; the subsequent control approval is recorded separately below. |
+| In-house KYC controls IH-01-IH-08 | User in this chat | Approved on 27 October 2026 by the reply "approved" to the protocol review. Required methods, sources, operating-policy values and named owner were not supplied. This does not record implementation, issuer/regulatory acceptance or Phase 2 completion. |
+| Phase 2 KYC baseline and integration deferral | User in this chat | Approved recommended methods/policy on 28 October 2026. Subsequently requested licensed integration deferral because access is unavailable. Keep it required before launch/financial enablement and continue local foundations. Hosting excluded. |
 | Remaining business scope and commercial model | Product owner / finance | Pending; not approved by the acceptance-to-progress message |
 | Issuer/funding and partner integration feasibility | Issuer / partnerships / engineering | Pending |
 | Accounting, rules and settlement | Finance | Pending |
@@ -545,5 +594,10 @@ This draft is saved for review with the unchanged source BRD. Subsequent impleme
 | 0.1 | 5 October 2026 | Initial FDD based on the unchanged Pull2Spend BRD; provisional product naming and platform point-conversion assumption. |
 | 0.2 | 26 October 2026 | Confirm Pull2Spend branding, resolve OD-01 and record the BRS reviewer's acceptance to progress with the valuation clarification. Replace platform point conversion with partner-supplied quantity/value across flows, contracts, entities, screens and acceptance criteria. Preserve fee models, approval controls, accounting and unresolved decisions. |
 | 0.3 | 26 October 2026 | Record the user-directed hosting deferral. Keep provider-specific provisioning and operational activation outside current Phase 1 delivery while preserving later hosting-readiness, security and financial approval gates. |
+| 0.4 | 27 October 2026 | Record acceptance of an in-house KYC approach. Replace mandatory commercial-provider framing with a proposed in-house protocol and explicit approval checklist. Retain the BRD's automated ID-document authenticity, liveness and screening requirements, financial eligibility gates and unresolved policy/operating decisions. No application behavior changes by this revision. |
+| 0.5 | 27 October 2026 | Record the user's approval of all IH-01-IH-08 controls, including separate examiner/checker approval. Distinguish the approved requirements from missing operating values and implementation evidence. Preserve financial gates and Phase 2 completion criteria; no application behavior changes. |
+| 0.6 | 28 October 2026 | Record the approved Regula/Mesh and operating-policy baseline, then the user-requested licensed integration deferral. Keep mandatory live KYC before launch and financial enablement; continue synthetic-data foundations. Hosting remains excluded. |
+| 0.7 | 28 October 2026 | Clarify server-directed contact resend timing and conservative mobile financial-status presentation. Reference the updated delivery plan and Erastus-owned device verification. Licensed integration and hosting remain deferred; no operating acceptance is inferred. |
+| 0.8 | 28 October 2026 | Reference delivery plan v0.12 and its current Phase 2 verification and outstanding-evidence audit. Preserve the approved design, licensed integration deferral and hosting exclusion. No additional operating acceptance is recorded. |
 
 The complete FDD content was recovered from the original v0.1 PDF supplied in Downloads, using the available original Markdown for sections 1-8 and PDF text/table extraction for sections 9-21. Formatting was reconstructed; section, acceptance and decision IDs were preserved. The original BRD is copied unchanged. This FDD remains a design record. Phase 1 implementation and test evidence are recorded separately in the foundations document and implementation plan. No deployment or financial-service authorization is implied.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\ConsumerOtpDelivery;
 use App\Models\FoundationDelivery;
 use App\Models\FoundationEvent;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,7 +14,7 @@ use Illuminate\Support\Str;
 final class FoundationClaims
 {
     /** @return Builder<FoundationEvent>|Builder<FoundationDelivery> */
-    public function due(FoundationEvent|FoundationDelivery $model): Builder
+    public function due(FoundationEvent|FoundationDelivery|ConsumerOtpDelivery $model): Builder
     {
         $pendingStates = $model instanceof FoundationDelivery ? ['pending', 'unknown'] : ['pending'];
 
@@ -27,7 +28,7 @@ final class FoundationClaims
             });
     }
 
-    public function acquire(FoundationEvent|FoundationDelivery $model, string $id): ?string
+    public function acquire(FoundationEvent|FoundationDelivery|ConsumerOtpDelivery $model, string $id): ?string
     {
         $token = (string) Str::uuid();
         $changed = $this->due($model)->whereKey($id)->increment('attempts', 1, [
@@ -39,7 +40,7 @@ final class FoundationClaims
         return $changed === 1 ? $token : null;
     }
 
-    public function release(FoundationEvent|FoundationDelivery $record, string $token, string $errorCode, string $state = 'pending'): bool
+    public function release(FoundationEvent|FoundationDelivery|ConsumerOtpDelivery $record, string $token, string $errorCode, string $state = 'pending'): bool
     {
         $attempt = $record->fresh()->attempts;
         $delays = config('pull2spend.retry_seconds');
