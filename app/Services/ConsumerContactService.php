@@ -159,6 +159,10 @@ final class ConsumerContactService
     /** @param array<string,string>|null $payload */
     private function issue(string $digest, ?array $payload): ConsumerChallenge
     {
+        $latest = ConsumerChallenge::where('contact_hash', $digest)->where('purpose', 'contact_verification')->latest('created_at')->lockForUpdate()->first();
+        if ($latest !== null && $latest->created_at->addSeconds((int) config('pull2spend.consumer.contact_resend_seconds', 60))->isFuture()) {
+            throw new ConsumerIdentityFailure('contact_resend_too_soon', 429, 'retry_later');
+        }
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiry = now()->addSeconds(max(60, min(1800, (int) config('pull2spend.consumer.challenge_ttl_seconds', 300))));
         $challenge = ConsumerChallenge::create(['id' => (string) Str::uuid(), 'purpose' => 'contact_verification', 'method' => 'verified_channel_otp',

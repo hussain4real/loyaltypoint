@@ -26,7 +26,7 @@ class ConsumerReviewController extends Controller
         $state = $request->query('state', 'under_review');
         abort_unless(in_array($state, ['all', ...array_column(KycState::cases(), 'value')], true), 422);
         $query = $access->scopeQuery(ConsumerVerificationRevision::query(), $request->user('web'), 'kyc.review')
-            ->with('identity')->whereHas('identity', fn (Builder $identity): Builder => $identity->whereColumn('consumer_identities.verification_revision', 'consumer_verification_revisions.revision'));
+            ->with(['identity', 'latestRecommendation'])->whereHas('identity', fn (Builder $identity): Builder => $identity->whereColumn('consumer_identities.verification_revision', 'consumer_verification_revisions.revision'));
         if ($state !== 'all') {
             $query->where('state', $state);
         }
@@ -38,12 +38,19 @@ class ConsumerReviewController extends Controller
     public function review(Request $request, string $revision, ConsumerIdentityService $service): RedirectResponse
     {
         $data = $request->validate(['expected_revision' => ['required', 'integer', 'min:1'],
-            'decision' => ['required', Rule::in(['verified', 'rejected', 'reverification_required'])],
+            'decision' => ['required', Rule::in(['recommend_verified', 'verified', 'rejected', 'reverification_required'])],
             'reason' => ['required', 'string', 'regex:/\A[a-z][a-z0-9_.-]{0,99}\z/'],
             'evidence_reference' => ['required', 'string', 'regex:/\A[A-Za-z0-9][A-Za-z0-9_.:\/-]{0,179}\z/'],
-            'resolved_checks' => ['sometimes', 'array'], 'resolved_checks.*' => ['string']]);
+            'resolved_checks' => ['sometimes', 'array'], 'resolved_checks.*' => ['string'],
+            'risk_level' => ['exclude_unless:decision,recommend_verified', 'required', Rule::in(['standard', 'elevated'])],
+            'document_expires_on' => ['exclude_unless:decision,recommend_verified', 'required', 'date_format:Y-m-d']]);
         try {
-            $service->review($request->user('web'), $revision, (int) $data['expected_revision'], KycState::from($data['decision']), $data['reason'], $data['evidence_reference'], $data['resolved_checks'] ?? []);
+            if ($data['decision'] === 'recommend_verified') {
+                $service->recommendApproval($request->user('web'), $revision, (int) $data['expected_revision'], $data['reason'], $data['evidence_reference'],
+                    $data['resolved_checks'] ?? [], $data['risk_level'], $data['document_expires_on']);
+            } else {
+                $service->review($request->user('web'), $revision, (int) $data['expected_revision'], KycState::from($data['decision']), $data['reason'], $data['evidence_reference'], $data['resolved_checks'] ?? []);
+            }
         } catch (ConsumerIdentityFailure $exception) {
             return back()->withErrors(['review' => $exception->errorCode]);
         }
@@ -60,7 +67,7 @@ class ConsumerReviewController extends Controller
 
         return response()->json(['reference' => $record->reference, 'checks' => $record->checks, 'unresolved_checks' => $record->unresolved_checks,
             'evidence_references' => $record->evidence, 'viewer_available' => false,
-            'notice' => 'Protected provider viewer requires a selected identity service.'], headers: ['Cache-Control' => 'no-store, private']);
+            'notice' => 'Protected evidence viewing awaits the configured Regula verification process.'], headers: ['Cache-Control' => 'no-store, private']);
     }
 
     public function restrict(Request $request, string $identity, ConsumerIdentityService $service): RedirectResponse

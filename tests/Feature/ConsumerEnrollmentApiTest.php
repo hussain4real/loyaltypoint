@@ -10,6 +10,7 @@ use App\Models\ConsumerSession;
 use App\Models\ConsumerVerificationRevision;
 use App\Models\StaffMembership;
 use App\Models\User;
+use App\Services\ConsumerIdentityService;
 use App\Services\ConsumerVerificationDecision;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -113,8 +114,8 @@ it('authenticates and deduplicates callback receipt atomically with its enrollme
         ->assertAccepted()->assertJsonPath('reference', $first->json('reference'));
 
     $this->assertDatabaseCount('consumer_verification_receipts', 1);
-    $this->assertDatabaseCount('consumer_enrollment_intents', 1);
-    $this->assertDatabaseHas('consumer_identities', ['id' => $revision->consumer_identity_id, 'kyc_state' => 'verified']);
+    $this->assertDatabaseCount('consumer_enrollment_intents', 0);
+    $this->assertDatabaseHas('consumer_identities', ['id' => $revision->consumer_identity_id, 'kyc_state' => 'under_review']);
 });
 
 it('rejects callback authentication schema and mismatched subjects without an enrollment outcome', function (string $problem, int $status): void {
@@ -188,3 +189,24 @@ it('does not reveal revision or identity existence before checking review permis
     $this->assertDatabaseCount('consumer_review_decisions', 0);
     expect($identity->fresh()->restriction)->toBe(AccountRestriction::None);
 })->with([[StaffRole::Support, false, 403], [StaffRole::Compliance, true, 404]]);
+
+it('records an examiner recommendation through the form and requires a different signed-in checker', function (): void {
+    $this->travelTo(CarbonImmutable::createFromTimestampUTC(2000000000));
+    $revision = ConsumerVerificationRevision::factory()->create();
+    app(ConsumerIdentityService::class)->applyProviderDecision(new ConsumerVerificationDecision($revision->source,
+        json_decode(enrollmentCallbackBody($revision), true, flags: JSON_THROW_ON_ERROR)));
+    enrollmentStaffLogin($this, StaffRole::Compliance);
+    $url = '/backoffice/identity/reviews/'.$revision->reference;
+    $input = ['expected_revision' => 1, 'decision' => 'recommend_verified', 'reason' => 'checks_examined', 'evidence_reference' => 'review:examiner',
+        'risk_level' => 'standard', 'document_expires_on' => now()->addYears(2)->toDateString()];
+    $this->from('/backoffice/identity/reviews')->post($url, $input)->assertRedirect('/backoffice/identity/reviews')->assertSessionHasNoErrors();
+    $this->assertDatabaseCount('consumer_enrollment_intents', 0);
+    $this->get('/backoffice/identity/reviews')->assertOk()->assertSee('Latest examiner recommendation')->assertSee('review:examiner')->assertSee(now()->addYears(2)->toDateString());
+    $approval = ['expected_revision' => 1, 'decision' => 'verified', 'reason' => 'checks_approved', 'evidence_reference' => 'review:checker', 'risk_level' => 'standard', 'document_expires_on' => ''];
+    $this->post($url, $approval)->assertRedirect()->assertSessionHasErrors('review');
+    $this->post('/backoffice/logout')->assertRedirect();
+    enrollmentStaffLogin($this, StaffRole::Compliance);
+    $this->from('/backoffice/identity/reviews')->post($url, $approval)->assertRedirect('/backoffice/identity/reviews')->assertSessionHasNoErrors();
+    $this->assertDatabaseCount('consumer_enrollment_intents', 1);
+    $this->assertDatabaseHas('consumer_identities', ['id' => $revision->consumer_identity_id, 'kyc_state' => 'verified']);
+});

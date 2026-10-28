@@ -33,6 +33,7 @@ it('creates one identity from concurrent contact proofs without losing a valid o
             'password' => 'ConcurrentPassword123!', 'password_confirmation' => 'ConcurrentPassword123!', 'terms_version' => 'terms-1', 'privacy_notice_version' => 'privacy-1'];
         $contacts = app(ConsumerContactService::class);
         $first = $contacts->register($input);
+        $first->forceFill(['created_at' => now()->subMinute()])->save();
         $second = $separateIntents ? $contacts->register($input) : $first;
         $environment = ['APP_ENV' => 'testing', 'APP_KEY' => config('app.key'), 'APP_DEBUG' => 'false',
             'DB_URL' => '', 'DB_CONNECTION' => $driver, 'DB_DATABASE' => $connection['database'], 'DB_HOST' => $connection['host'] ?? '',

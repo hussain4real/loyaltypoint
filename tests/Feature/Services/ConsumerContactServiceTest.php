@@ -107,6 +107,7 @@ it('cannot replace credentials through a second verified registration intent', f
     $first = $service->register(consumerRegistrationInput());
     $secondInput = consumerRegistrationInput();
     $secondInput['password'] = $secondInput['password_confirmation'] = 'AnotherPassword-1234!';
+    $this->travel(60)->seconds();
     $second = $service->register($secondInput);
     $code1 = ConsumerOtpDelivery::where('challenge_id', $first->id)->sole()->payload['code'];
     $code2 = ConsumerOtpDelivery::where('challenge_id', $second->id)->sole()->payload['code'];
@@ -126,6 +127,7 @@ it('rotates a resend challenge and prevents the old code from activation', funct
     $service = app(ConsumerContactService::class);
     $old = $service->register(consumerRegistrationInput());
     $code = ConsumerOtpDelivery::where('challenge_id', $old->id)->sole()->payload['code'];
+    $this->travel(60)->seconds();
     $new = $service->resend($old->id);
     expect($new->id)->not->toBe($old->id);
     expect($old->fresh()->revoked_at)->not->toBeNull();
@@ -249,7 +251,7 @@ it('erases unused registration credentials at expiry while preserving other chal
 });
 
 it('shares contact request controls across registration and resend instead of resetting the budget', function (): void {
-    config(['pull2spend.consumer.registration_requests_per_minute' => 2]);
+    config(['pull2spend.consumer.registration_requests_per_minute' => 2, 'pull2spend.consumer.contact_resend_seconds' => 0]);
     $service = app(ConsumerContactService::class);
     $first = $service->register(consumerRegistrationInput());
     $second = $service->resend($first->id);
@@ -268,4 +270,18 @@ it('rejects a composite mailer that could fall back to logging credentials', fun
     $service->deliver($delivery->id);
     Mail::assertNothingSent();
     expect($delivery->fresh()->state)->toBe('pending');
+});
+
+it('enforces the resend interval across resend and repeated registration without revoking the active proof', function (): void {
+    $this->freezeTime();
+    $service = app(ConsumerContactService::class);
+    $challenge = $service->register(consumerRegistrationInput());
+    expect(fn () => $service->resend($challenge->id))->toThrow(ConsumerIdentityFailure::class, 'contact_resend_too_soon');
+    expect(fn () => $service->register(consumerRegistrationInput()))->toThrow(ConsumerIdentityFailure::class, 'contact_resend_too_soon');
+    $this->assertDatabaseCount('consumer_challenges', 1);
+    expect($challenge->fresh()->revoked_at)->toBeNull();
+    $this->travel(60)->seconds();
+    $replacement = $service->resend($challenge->id);
+    expect($replacement->id)->not->toBe($challenge->id);
+    expect($challenge->fresh()->revoked_at)->not->toBeNull();
 });

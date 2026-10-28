@@ -17,13 +17,13 @@ class ConsumerReviewDecision extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['reference', 'consumer_verification_revision_id', 'actor_id', 'decision', 'reason', 'evidence_reference', 'resolved_checks'];
+    protected $fillable = ['reference', 'consumer_verification_revision_id', 'actor_id', 'decision', 'reason', 'evidence_reference', 'resolved_checks', 'review_context'];
 
-    protected $hidden = ['evidence', 'checks', 'payload', 'payload_hash', 'request_hash', 'idempotency_hash'];
+    protected $hidden = ['evidence', 'checks', 'payload', 'payload_hash', 'request_hash', 'idempotency_hash', 'review_context'];
 
     protected function casts(): array
     {
-        return ['resolved_checks' => 'array'];
+        return ['resolved_checks' => 'array', 'review_context' => 'encrypted:array'];
     }
 
     protected static function booted(): void

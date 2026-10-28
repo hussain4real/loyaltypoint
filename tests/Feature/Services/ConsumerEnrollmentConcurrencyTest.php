@@ -7,6 +7,7 @@ use App\Enums\KycState;
 use App\Enums\StaffRole;
 use App\Models\ConsumerEnrollmentIntent;
 use App\Models\ConsumerIdentity;
+use App\Models\ConsumerReviewDecision;
 use App\Models\ConsumerVerificationReceipt;
 use App\Models\ConsumerVerificationRevision;
 use App\Models\StaffMembership;
@@ -60,7 +61,12 @@ function kycConcurrentDecisionCode(ConsumerVerificationRevision $revision, strin
     return '$app->make(App\\Services\\ConsumerIdentityService::class)->applyProviderDecision(new App\\Services\\ConsumerVerificationDecision("local-fixture", '.var_export($payload, true).'));';
 }
 
-it('commits one initial intent across concurrent distinct approvals and a replay after lost acknowledgement', function (): void {
+function kycConcurrentStaffContext(StaffMembership $staff): string
+{
+    return '$staff = App\\Models\\StaffMembership::findOrFail('.$staff->id.'); $session = $app->make("session.store"); $session->start(); $binding = hash("sha256", $session->getId()); $staff->forceFill(["session_binding"=>$binding])->save(); $session->put(["staff_mfa_user"=>$staff->user_id,"staff_mfa_at"=>now()->timestamp,"staff_mfa_binding"=>$binding]); $request = Illuminate\\Http\\Request::create("/backoffice"); $request->setLaravelSession($session); $app->instance("request",$request); $request->setUserResolver(fn()=>$staff->user); config(["pull2spend.backoffice_enabled"=>true]); ';
+}
+
+it('commits one initial intent across concurrent independent checkers and a replay after lost acknowledgement', function (): void {
     withKycConcurrencyDatabase(function (array $environment, string $bootstrap): void {
         $revision = ConsumerVerificationRevision::factory()->create();
         $children = [new Process([PHP_BINARY, '-r', $bootstrap.kycConcurrentDecisionCode($revision, 'event-1')], base_path(), $environment),
@@ -72,7 +78,28 @@ it('commits one initial intent across concurrent distinct approvals and a replay
             expect($child->wait())->toBe(0, $child->getErrorOutput().$child->getOutput());
         }
         expect(ConsumerVerificationReceipt::count())->toBe(2);
+        expect(ConsumerEnrollmentIntent::count())->toBe(0);
+        $examiner = StaffMembership::factory()->enrolled()->create(['role' => StaffRole::Compliance, 'partner_ids' => null, 'customer_ids' => null]);
+        $examine = kycConcurrentStaffContext($examiner).'$app->make(App\\Services\\ConsumerIdentityService::class)->recommendApproval($staff->user, '.var_export($revision->reference, true).', 1, "checks_examined", "review:examiner", [], "standard", '.var_export(now()->addYears(2)->toDateString(), true).');';
+        $examination = new Process([PHP_BINARY, '-r', $bootstrap.$examine], base_path(), $environment);
+        expect($examination->run())->toBe(0, $examination->getErrorOutput().$examination->getOutput());
+        $approvers = [];
+        foreach ([1, 2] as $index) {
+            $checker = StaffMembership::factory()->enrolled()->create(['role' => StaffRole::Compliance, 'partner_ids' => null, 'customer_ids' => null]);
+            $approve = kycConcurrentStaffContext($checker).'try { $app->make(App\\Services\\ConsumerIdentityService::class)->review($staff->user, '.var_export($revision->reference, true).', 1, App\\Enums\\KycState::Verified, "checks_approved", "review:checker-'.$index.'"); echo "approved"; } catch (App\\Services\\ConsumerIdentityFailure $failure) { if ($failure->errorCode !== "identity_review_conflict") { throw $failure; } echo "conflict"; }';
+            $approver = new Process([PHP_BINARY, '-r', $bootstrap.$approve], base_path(), $environment);
+            $approver->setTimeout(30)->start();
+            $approvers[] = $approver;
+        }
+        $outcomes = [];
+        foreach ($approvers as $approver) {
+            expect($approver->wait())->toBe(0, $approver->getErrorOutput().$approver->getOutput());
+            $outcomes[] = $approver->getOutput();
+        }
+        sort($outcomes);
+        expect($outcomes)->toBe(['approved', 'conflict']);
         expect(ConsumerEnrollmentIntent::count())->toBe(1);
+        expect(ConsumerReviewDecision::count())->toBe(2);
         $ackLost = new Process([PHP_BINARY, '-r', $bootstrap.kycConcurrentDecisionCode($revision, 'event-1').' exit(17);'], base_path(), $environment);
         expect($ackLost->run())->toBe(17);
         $replayed = new Process([PHP_BINARY, '-r', $bootstrap.kycConcurrentDecisionCode($revision, 'event-1')], base_path(), $environment);
@@ -97,7 +124,7 @@ it('serializes suspension against provider approval without letting the callback
             expect($child->wait())->toBe(0, $child->getErrorOutput().$child->getOutput());
         }
         $identity = ConsumerIdentity::findOrFail($revision->consumer_identity_id);
-        expect($identity)->restriction->toBe(AccountRestriction::Suspended)->kyc_state->toBe(KycState::Verified);
+        expect($identity)->restriction->toBe(AccountRestriction::Suspended)->kyc_state->toBe(KycState::UnderReview);
         expect(ConsumerEnrollmentIntent::count())->toBeLessThanOrEqual(1);
         $later = new Process([PHP_BINARY, '-r', $bootstrap.kycConcurrentDecisionCode($revision, 'event-2')], base_path(), $environment);
         expect($later->run())->toBe(0, $later->getErrorOutput().$later->getOutput());

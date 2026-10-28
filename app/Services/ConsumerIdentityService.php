@@ -13,6 +13,7 @@ use App\Models\ConsumerSession;
 use App\Models\ConsumerVerificationReceipt;
 use App\Models\ConsumerVerificationRevision;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -173,7 +174,7 @@ final class ConsumerIdentityService
             if (! $receipt->wasRecentlyCreated) {
                 return $receipt;
             }
-            $adverseChecks = array_keys(array_filter($data['checks'], fn (string $check): bool => in_array($check, ['hit', 'rejected'], true)));
+            $adverseChecks = array_keys(array_filter($data['checks'], fn (string $check): bool => $check !== 'clear'));
             $newerEvidence = $current->provider_observed_at === null || $decision->observedAt() > $current->provider_observed_at;
             $changedAtSameInstant = $current->provider_observed_at !== null && $decision->observedAt() == $current->provider_observed_at
                 && FoundationIdempotency::fingerprint($current->checks) !== FoundationIdempotency::fingerprint($data['checks']);
@@ -187,6 +188,14 @@ final class ConsumerIdentityService
                 $this->cases->open('kyc', 'kyc-incident:'.$receipt->reference, customerId: $identity->user_id);
                 $this->audit->record(null, 'identity.adverse_evidence_received', $receipt->reference, 'new_adverse_evidence', customerId: $identity->user_id,
                     context: ['state' => KycState::ReverificationRequired->value]);
+
+                return $receipt;
+            }
+            if ($identity->verification_revision === $current->revision && $current->manual_decided_at !== null
+                && $current->state === KycState::Verified && $adverseChecks === [] && $newerEvidence
+                && $current->unresolved_checks === []) {
+                $current->update(['checks' => $data['checks'], 'provider_observed_at' => $decision->observedAt()]);
+                $this->audit->record(null, 'identity.monitoring_refreshed', $receipt->reference, 'authenticated_evidence', customerId: $identity->user_id);
 
                 return $receipt;
             }
@@ -212,7 +221,7 @@ final class ConsumerIdentityService
             $state = in_array('rejected', $checks, true) ? KycState::Rejected
                 : (($requiresReview) ? KycState::UnderReview
                     : (in_array('pending', $checks, true) ? KycState::Pending : KycState::Verified));
-            if ($state === KycState::Verified && ! $this->hasValidityPolicy()) {
+            if ($state === KycState::Verified) {
                 $state = KycState::UnderReview;
             }
             $current->update(['checks' => $checks, 'unresolved_checks' => $unresolved, 'manual_review_required' => $requiresReview, 'provider_observed_at' => $decision->observedAt(), 'state' => $state]);
@@ -227,7 +236,36 @@ final class ConsumerIdentityService
     }
 
     /** @param list<string> $resolvedChecks */
+    public function recommendApproval(User $actor, string $reference, int $expectedRevision, string $reason, string $evidenceReference, array $resolvedChecks, string $riskLevel, string $documentExpiresOn): ConsumerVerificationRevision
+    {
+        if (! in_array($riskLevel, ['standard', 'elevated'], true)
+            || preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $documentExpiresOn) !== 1) {
+            throw new ConsumerIdentityFailure('invalid_identity_review', 422);
+        }
+        try {
+            $expiry = CarbonImmutable::createFromFormat('!Y-m-d', $documentExpiresOn, 'UTC');
+        } catch (\Exception) {
+            throw new ConsumerIdentityFailure('invalid_identity_review', 422);
+        }
+        if ($expiry === false || $expiry->format('Y-m-d') !== $documentExpiresOn || $expiry->endOfDay() <= now()) {
+            throw new ConsumerIdentityFailure('identity_document_expired', 422);
+        }
+
+        return $this->recordReview($actor, $reference, $expectedRevision, KycState::Verified, $reason, $evidenceReference, $resolvedChecks,
+            ['risk_level' => $riskLevel, 'document_expires_on' => $documentExpiresOn]);
+    }
+
+    /** @param list<string> $resolvedChecks */
     public function review(User $actor, string $reference, int $expectedRevision, KycState $decision, string $reason, string $evidenceReference, array $resolvedChecks = []): ConsumerVerificationRevision
+    {
+        return $this->recordReview($actor, $reference, $expectedRevision, $decision, $reason, $evidenceReference, $resolvedChecks);
+    }
+
+    /**
+     * @param  list<string>  $resolvedChecks
+     * @param  array{risk_level:string,document_expires_on:string}|null  $recommendation
+     */
+    private function recordReview(User $actor, string $reference, int $expectedRevision, KycState $decision, string $reason, string $evidenceReference, array $resolvedChecks, ?array $recommendation = null): ConsumerVerificationRevision
     {
         $revision = $this->access->scopeQuery(ConsumerVerificationRevision::query(), $actor, 'kyc.review')
             ->where('reference', $reference)->firstOrFail();
@@ -239,7 +277,9 @@ final class ConsumerIdentityService
             throw new ConsumerIdentityFailure('invalid_identity_review', 422);
         }
 
-        return DB::transaction(function () use ($actor, $revision, $expectedRevision, $decision, $reason, $evidenceReference, $resolvedChecks): ConsumerVerificationRevision {
+        sort($resolvedChecks);
+
+        return DB::transaction(function () use ($actor, $revision, $expectedRevision, $decision, $reason, $evidenceReference, $resolvedChecks, $recommendation): ConsumerVerificationRevision {
             $identity = $this->lockedIdentity($revision->consumer_identity_id);
             $current = ConsumerVerificationRevision::query()->whereKey($revision->id)->lockForUpdate()->firstOrFail();
             $this->access->authorize($actor, 'kyc.review', customerId: $current->customer_id);
@@ -247,6 +287,10 @@ final class ConsumerIdentityService
                 || ($current->manual_decided_at !== null && $decision !== KycState::ReverificationRequired)) {
                 throw new ConsumerIdentityFailure('identity_review_conflict', 409);
             }
+            if ($actor->id === $identity->user_id) {
+                throw new ConsumerIdentityFailure('self_identity_review_denied', 403);
+            }
+            $reviewContext = null;
             if ($decision === KycState::Verified) {
                 $checks = $current->checks;
                 if (! is_array($checks) || count($checks) !== count(ConsumerVerificationDecision::CHECKS)
@@ -257,11 +301,49 @@ final class ConsumerIdentityService
                 if (! $this->hasValidityPolicy()) {
                     throw new ConsumerIdentityFailure('identity_policy_required', 503);
                 }
+                if ($current->policy_reference !== config('pull2spend.consumer.policy_reference')) {
+                    throw new ConsumerIdentityFailure('identity_policy_changed', 409);
+                }
+                if ($current->provider_observed_at === null || $current->provider_observed_at <= now()->subSeconds((int) config('pull2spend.consumer.screening_max_age_seconds', 86400))) {
+                    throw new ConsumerIdentityFailure('screening_stale', 409);
+                }
+                $observationHash = FoundationIdempotency::fingerprint(['checks' => $current->checks, 'unresolved_checks' => $current->unresolved_checks,
+                    'observed_at' => $current->provider_observed_at->toIso8601String(), 'policy_reference' => $current->policy_reference, 'evidence' => $current->evidence]);
+                if ($recommendation !== null) {
+                    $reviewContext = [...$recommendation, 'observation_hash' => $observationHash];
+                } else {
+                    $proposal = ConsumerReviewDecision::where('consumer_verification_revision_id', $current->id)
+                        ->where('decision', 'recommend_verified')->latest('id')->first();
+                    if ($proposal === null) {
+                        throw new ConsumerIdentityFailure('examiner_recommendation_required', 409);
+                    }
+                    if ($proposal->actor_id === $actor->id) {
+                        throw new ConsumerIdentityFailure('independent_checker_required', 409);
+                    }
+                    $reviewContext = $proposal->review_context;
+                    if (! is_array($reviewContext) || ! hash_equals($observationHash, $reviewContext['observation_hash'])
+                        || $proposal->resolved_checks !== $resolvedChecks) {
+                        throw new ConsumerIdentityFailure('examiner_recommendation_stale', 409);
+                    }
+                    if (CarbonImmutable::parse($reviewContext['document_expires_on'], 'UTC')->endOfDay() <= now()) {
+                        throw new ConsumerIdentityFailure('identity_document_expired', 409);
+                    }
+                    $reviewContext['examiner_decision_reference'] = $proposal->reference;
+                }
+
             }
             ConsumerReviewDecision::create(['consumer_verification_revision_id' => $current->id, 'actor_id' => $actor->id,
-                'decision' => $decision->value, 'reason' => $reason, 'evidence_reference' => $evidenceReference, 'resolved_checks' => $resolvedChecks]);
+                'decision' => $recommendation !== null ? 'recommend_verified' : $decision->value, 'reason' => $reason, 'evidence_reference' => $evidenceReference, 'resolved_checks' => $resolvedChecks, 'review_context' => $reviewContext]);
+            if ($recommendation !== null) {
+                $current->update(['state' => KycState::UnderReview, 'manual_review_required' => true]);
+                $this->applyState($identity, $current, KycState::UnderReview);
+                $this->audit->record($actor->id, 'identity.approval_recommended', $current->reference, $reason, customerId: $identity->user_id,
+                    context: ['evidence_reference' => $evidenceReference]);
+
+                return $current;
+            }
             $current->update(['state' => $decision, 'manual_decided_at' => now(), 'manual_review_required' => true, 'unresolved_checks' => $decision === KycState::Verified ? [] : $current->unresolved_checks]);
-            $this->applyState($identity, $current, $decision);
+            $this->applyState($identity, $current, $decision, $reviewContext);
             $this->audit->record($actor->id, 'identity.reviewed', $current->reference, $reason, customerId: $identity->user_id, context: ['evidence_reference' => $evidenceReference, 'state' => $decision->value]);
 
             return $current;
@@ -329,6 +411,9 @@ final class ConsumerIdentityService
         if ($identity->kyc_state !== KycState::Verified || $revision?->state !== KycState::Verified || $identity->expires_at === null || $identity->expires_at <= now()) {
             $reasons[] = 'kyc_required';
         }
+        if ($revision?->provider_observed_at === null || $revision->provider_observed_at <= now()->subSeconds((int) config('pull2spend.consumer.screening_max_age_seconds', 86400))) {
+            $reasons[] = 'screening_stale';
+        }
         if (! config('pull2spend.consumer.policy_approved', false) || $identity->policy_reference !== config('pull2spend.consumer.policy_reference')) {
             $reasons[] = 'identity_policy_unapproved';
         }
@@ -367,11 +452,17 @@ final class ConsumerIdentityService
         return is_int($seconds) && $seconds > 0 && $seconds <= 315360000;
     }
 
-    private function applyState(ConsumerIdentity $identity, ConsumerVerificationRevision $revision, KycState $state): void
+    private function applyState(ConsumerIdentity $identity, ConsumerVerificationRevision $revision, KycState $state, ?array $reviewContext = null): void
     {
         $previous = $identity->kyc_state;
         $verifiedAt = $state === KycState::Verified ? ($identity->verified_at ?? now()) : null;
         $expiresAt = $state === KycState::Verified ? ($identity->expires_at ?? now()->addSeconds(config('pull2spend.consumer.verification_validity_seconds'))) : null;
+        if ($state === KycState::Verified && $reviewContext !== null) {
+            $seconds = $reviewContext['risk_level'] === 'elevated'
+                ? (int) config('pull2spend.consumer.elevated_verification_validity_seconds', 7776000)
+                : (int) config('pull2spend.consumer.verification_validity_seconds');
+            $expiresAt = min($expiresAt, now()->addSeconds($seconds), CarbonImmutable::parse($reviewContext['document_expires_on'], 'UTC')->endOfDay());
+        }
         $identity->update(['kyc_state' => $state, 'verified_at' => $verifiedAt, 'expires_at' => $expiresAt]);
         if ($state === KycState::Verified && $identity->restriction === AccountRestriction::None && $expiresAt > now()) {
             $this->recordEnrollment($identity, $revision);

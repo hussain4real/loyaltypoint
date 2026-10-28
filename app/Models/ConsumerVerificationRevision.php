@@ -6,9 +6,11 @@ namespace App\Models;
 
 use App\Enums\KycState;
 use Database\Factories\ConsumerVerificationRevisionFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class ConsumerVerificationRevision extends Model
@@ -24,6 +26,13 @@ class ConsumerVerificationRevision extends Model
     public function identity(): BelongsTo
     {
         return $this->belongsTo(ConsumerIdentity::class, 'consumer_identity_id');
+    }
+
+    /** @return HasOne<ConsumerReviewDecision, $this> */
+    public function latestRecommendation(): HasOne
+    {
+        return $this->hasOne(ConsumerReviewDecision::class)->ofMany(['id' => 'max'],
+            fn (Builder $query) => $query->where('decision', 'recommend_verified'));
     }
 
     protected function casts(): array

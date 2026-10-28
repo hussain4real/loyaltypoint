@@ -53,6 +53,7 @@ it('keeps ordinary legacy users compatible with V1 login', function (): void {
 });
 
 it('limits registration requests before issuing unlimited contact deliveries', function (): void {
+    config(['pull2spend.consumer.contact_resend_seconds' => 0]);
     Queue::fake([DeliverConsumerContactCode::class]);
     $input = ['display_name' => 'Consumer', 'contact' => ['kind' => 'email', 'value' => 'limited@example.invalid'], 'password' => 'SafePassword123!', 'password_confirmation' => 'SafePassword123!', 'terms_version' => 'terms-1', 'privacy_notice_version' => 'privacy-1'];
     for ($i = 0; $i < 5; $i++) {
