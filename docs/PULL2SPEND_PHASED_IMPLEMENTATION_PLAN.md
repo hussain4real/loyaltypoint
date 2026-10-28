@@ -2,11 +2,11 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.11 |
+| Version | 0.12 |
 | Date | 28 October 2026 |
 | Status | Phase 2 foundations in progress; KYC baseline approved, licensed integration deferred |
 | Business owner | Bankole, as named in the BRD |
-| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.7 |
+| Baseline | [Functional Design Document](PULL2SPEND_FDD.md), version 0.8 |
 | Business source | [Pull2Spend BRD](Pull2Spend_BRD_2.docx), Draft v1.0 |
 | Business review copy | [FDD PDF](PULL2SPEND_FDD.pdf) |
 | Plan review copy | [Implementation plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
@@ -68,6 +68,7 @@ Each applicable offer/snapshot/transaction retains the supplied points quantity,
 | 0.9 | 27 October 2026 | Record the user's approval of IH-01-IH-08. Replace the control-approval blocker with the specific missing methods, sources and operating-policy values. Preserve task IDs, unchecked Phase 2 gates and separate implementation/operational evidence. |
 | 0.10 | 28 October 2026 | Record approval of the recommended KYC baseline and the subsequent licensed integration deferral. Continue Phase 2 foundations; retain P02-T03/P02-T04 as required before Phase 8 acceptance or live financial enablement. Preserve all task IDs and completion gates; hosting excluded. |
 | 0.11 | 28 October 2026 | Record mobile resend timing, server-permitted financial status and disposal-race regressions, plus Erastus as the user-designated physical-device test owner. Keep the licensed integration deferral, open acceptance gates and all task IDs. |
+| 0.12 | 28 October 2026 | Record biometric enrollment cancellation regressions, the history compilation fix and current pagination-contract tests. Update verified local results and outstanding evidence. Preserve all task IDs, acceptance criteria, unchecked Phase 2 gates and the licensed integration/hosting deferrals. |
 
 The illustrative partner response is **10,000 points with a supplied monetary value of QAR 350.00.** Under the deducted-fee example, platform share at 12% is QAR 42.00, wallet credit is QAR 308.00, partner incentive at 25% of platform share is QAR 10.50 and platform retained revenue is QAR 31.50. Point-funding settlement obligations remain separate from the incentive; the example does not approve a funding direction or amount. The partner-billed fee variant still credits QAR 350.00 where that agreed model applies.
 
@@ -295,6 +296,17 @@ The user designated Erastus to run the remaining physical iPhone and Android che
 | Unavailable biometric capability | Test missing/disabled enrollment or a denied OS prompt. The app offers safe password fallback and does not claim successful biometric verification. | Erastus; pending |
 
 For each platform record the mobile/backend commit, build identifier, OS/device model, execution date, scenario result and sanitized evidence reference. Include the observed failure and recovery steps where applicable. Keep credentials and raw biometric/identity material out of the evidence. Attach or link results to the delivery review so Erastus's technical verification can be assessed separately from accountable Phase 2 acceptance and later issuer/compliance readiness.
+
+
+### Follow-up verification and outstanding evidence - 28 October 2026
+
+Mobile revision `376d37d` discards biometric enrollment after sign-out, session locking or disposal. Late server responses cannot save a local registration. If a credential write was already in flight, the cancelled registration and its local key are removed. Four response/storage regressions failed before the fix and pass afterward. This is controller-level evidence; Erastus's physical-device checks remain pending.
+
+Mobile revision `3509a86` fixes a retained history widget's missing transaction-type cases. All 19 history/filter widget tests pass, including five cases covering earned, redeemed, bonus and positive/negative adjustment activity. Revision `4f09713` corrects three stale pagination mocks and comments to the existing 15-item default in the mobile repository and Laravel V1 transaction controllers. All 25 repository tests pass. Pagination behavior and point valuation are unchanged.
+
+The final local single-worker suite at `4f09713` reports **807 passes and 45 failures**. Exactly the three pagination failures are resolved compared with the preceding 804-pass/48-failure run, with no new failure labels. Earlier history compilation was also corrected. All 61 focused identity/onboarding/notification tests pass, and strict analysis of identity/notification code and the changed history and pagination files is clean. The 45 remaining compatibility failures remain visible and block that gate. [CI run 40663175119](https://github.com/Wafaa-app/wafaa/actions/runs/40663175119) is pending at this audit; local results do not establish passing final-head CI. Backend revision `acb5c5e` still passes all four CI checks in PR 31. Its complete local suite has 685 tests and 2,524 assertions.
+
+Phase 2 completion remains unproven. Approved Terms and Privacy Notice text/version identifiers and actual permitted contact delivery evidence are required for the integrated registration journey. The user has been asked for the approved notice source; no approved text is inferred from policy approval. Erastus owns the pending physical-device results. Named Compliance appointments, evidence classification/protected viewing, actual deferred Regula/Mesh verification and accountable Phase 2 acceptance remain required as applicable. Later wallet/card commands must enforce central eligibility and prove their effects in Phases 4/6. No task or acceptance checkbox changes from this verification record. Real verification remains unavailable, financial admission remains disabled and hosting remains excluded under H-01.
 
 Compliance reviewers use this procedure for the implemented workflow:
 

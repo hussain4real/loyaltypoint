@@ -2,13 +2,13 @@
 
 | Document control | Value |
 | --- | --- |
-| Version | 0.7 |
+| Version | 0.8 |
 | Date | 28 October 2026 |
 | Status | Accepted to progress by BRS reviewer; KYC baseline approved; licensed verification deferred to required pre-launch integration |
 | Business owner | Bankole, as named in the source BRD |
 | Source | [Pull2Spend_BRD_2.docx](Pull2Spend_BRD_2.docx), Draft v1.0, 11 August 2026 |
 | Business review copy | [FDD PDF](PULL2SPEND_FDD.pdf) |
-| Delivery plan | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.11; [plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
+| Delivery plan | [Phased implementation plan](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.md), version 0.12; [plan PDF](PULL2SPEND_PHASED_IMPLEMENTATION_PLAN.pdf) |
 | Classification | Confidential - Personal Project, inherited from the BRD |
 | Existing application | Wafaa, implemented in the `loyaltypoint` repository |
 | Target business process | Multi-loyalty aggregation → points redemption → monetary wallet → virtual card spend |
@@ -598,5 +598,6 @@ This draft is saved for review with the unchanged source BRD. Subsequent impleme
 | 0.5 | 27 October 2026 | Record the user's approval of all IH-01-IH-08 controls, including separate examiner/checker approval. Distinguish the approved requirements from missing operating values and implementation evidence. Preserve financial gates and Phase 2 completion criteria; no application behavior changes. |
 | 0.6 | 28 October 2026 | Record the approved Regula/Mesh and operating-policy baseline, then the user-requested licensed integration deferral. Keep mandatory live KYC before launch and financial enablement; continue synthetic-data foundations. Hosting remains excluded. |
 | 0.7 | 28 October 2026 | Clarify server-directed contact resend timing and conservative mobile financial-status presentation. Reference the updated delivery plan and Erastus-owned device verification. Licensed integration and hosting remain deferred; no operating acceptance is inferred. |
+| 0.8 | 28 October 2026 | Reference delivery plan v0.12 and its current Phase 2 verification and outstanding-evidence audit. Preserve the approved design, licensed integration deferral and hosting exclusion. No additional operating acceptance is recorded. |
 
 The complete FDD content was recovered from the original v0.1 PDF supplied in Downloads, using the available original Markdown for sections 1-8 and PDF text/table extraction for sections 9-21. Formatting was reconstructed; section, acceptance and decision IDs were preserved. The original BRD is copied unchanged. This FDD remains a design record. Phase 1 implementation and test evidence are recorded separately in the foundations document and implementation plan. No deployment or financial-service authorization is implied.
